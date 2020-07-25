@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "experimentalDecorators": true,
     "outDir": "dist",
     "module": "esnext",
     "lib": ["dom", "esnext"],
@@ -17,6 +18,6 @@
     "noUnusedParameters": true,
     "allowSyntheticDefaultImports": true
   },
-  "include": ["src"],
+  "include": ["src", "lightning-fs.d.ts"],
   "exclude": ["node_modules", "dist", "example"]
 }
