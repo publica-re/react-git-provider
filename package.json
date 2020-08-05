@@ -55,10 +55,11 @@
   ],
   "dependencies": {
     "@isomorphic-git/lightning-fs": "^4.3.0",
-    "@material-ui/core": "^4.11.0",
     "@material-ui/icons": "^4.9.1",
-    "@material-ui/lab": "^4.0.0-alpha.56",
+    "@types/diff": "^4.0.2",
     "bind-decorator": "^1.0.11",
-    "isomorphic-git": "^1.7.4"
+    "diff": "^4.0.2",
+    "isomorphic-git": "^1.7.4",
+    "path": "^0.12.7"
   }
 }

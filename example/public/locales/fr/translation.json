@@ -1,0 +1,90 @@
+{
+  "view": {
+    "tree": "Afficher l'arbre",
+    "changes": "Afficher les changements",
+    "history": "Afficher l'historique"
+  },
+  "title": {
+    "merge": "Fusionner",
+    "branch": "Branche",
+    "commit": "Validation",
+    "tree": "Arbre des fichiers",
+    "changes": "État des changements",
+    "history": "Historique",
+    "file-pick": "Choisir un fichier",
+    "directory-pick": "Choisir un dossier"
+  },
+  "auth": {
+    "username": "Nom d'utilisateur",
+    "password": "Mot de passe",
+    "rememberCredentials": "Se souvenir de mes identifiants",
+    "rememberCredentialsWarning": "Vos identifiants ne sont pas enregsitrés de façon sécurisée dans votre navigateur. Nos recommandons donc de ne pas cocher cette option et vous admettez de l'utiliser à vos risques.",
+    "login": "Me connecter"
+  },
+  "commit": {
+    "message": "Message",
+    "stage-commit": "Suivre tout & valider",
+    "nothing": "Rien à valider",
+    "staged": "Valider les suivis"
+  },
+  "file": {
+    "save": "Enregistrer le fichier"
+  },
+  "log": {
+    "column": {
+      "oid": "Id de l'objet",
+      "message": "Message",
+      "author": "Auteur",
+      "committer": "Validateur",
+      "date": "Date"
+    },
+    "action": {
+      "rebase": "Rebaser la branche actuelle ici",
+      "revert": "Annuler les modifications jusqu'ici",
+      "new-branch": "Créer une nouvelle branche ici",
+      "diff": "Comparer",
+      "diff-left": "Comparer à gauche",
+      "diff-right": "Comparer à droite"
+    }
+  },
+  "action": {
+    "new": "Nouveau",
+    "properties": "Propriétés",
+    "directory": {
+      "new": "Nouveau dossier",
+      "download": "Télécharger tout",
+      "stage": "Suivre tout",
+      "unstage": "Arrêter tout le suivi",
+      "collapse": "Réduire",
+      "expand": "Étendre"
+    },
+    "file": {
+      "new": "Nouveau fichier",
+      "upload": "Téléverser",
+      "edit": "Modifier",
+      "download": "Télécharger",
+      "rename": "Renommer",
+      "move": "Déplacer",
+      "delete": "Supprimer",
+      "discard-changes": "Abandonner les modifications",
+      "stage": "Suivre",
+      "unstage": "Arrêter le suivi"
+    },
+    "force-merge": "Forcer la fusion",
+    "merge": "Fusionner",
+    "diff": "Comparer"
+  },
+  "status": {
+    "staged": "Suivi",
+    "not-staged": "Non-suivi",
+    "modified-not-staged": "Modifications non suivies",
+    "ignored": "Ignoré",
+    "not-changed": "Inchangé",
+    "changed": "Changé",
+    "restored": "Restauré",
+    "deleted": "Supprimé",
+    "added": "Ajouté",
+    "absent": "Absent",
+    "restored-modified": "Restauré et modifié"
+  }
+}
