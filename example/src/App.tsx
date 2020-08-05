@@ -1,6 +1,13 @@
-import React from "react";
-
+import React, { Suspense } from "react";
 import Git from "react-git-provider";
+import "./i18n";
+import { Loader, ActionMenu, Auth, Editor } from "./Components";
+
+import { Fabric, Stack, Layer, mergeStyles } from "@fluentui/react";
+
+import { initializeIcons } from "office-ui-fabric-react/lib/Icons";
+
+initializeIcons();
 
 export interface AppState {
   directoryPath: string;
@@ -28,16 +35,38 @@ export default class App extends React.Component<{}, AppState> {
 
   render() {
     return (
-      <Git.Provider
-        uri={"https://github.com/publica-re/react-xml-transformer.git"}
-        corsProxy={"http://localhost:9415"}
-        author={{ name: "demo", email: "dv@bmgr.me" }}
-        onMessage={console.log}
-      >
-        <div className="app">
-          <Git.FileManager path={"/"} />
-        </div>
-      </Git.Provider>
+      <Suspense fallback="loading">
+        <Git.Provider
+          uri={"https://git.publica.re/demo/work.git"}
+          corsProxy={"http://localhost:9415"}
+          author={{ name: "demo", email: "demo@publica.re" }}
+          basepath={"/test"}
+          loader={Loader}
+          auth={{ type: "element", value: Auth }}
+        >
+          <Fabric>
+            <Stack horizontal style={{ overflow: "hidden" }}>
+              <div className={contentClass}>
+                {this.state.filePath ? (
+                  <Editor filePath={this.state.filePath} />
+                ) : null}
+              </div>
+            </Stack>
+            <Layer>
+              <ActionMenu
+                onEdit={(path) => this.setState({ filePath: path })}
+              />
+            </Layer>
+          </Fabric>
+        </Git.Provider>
+      </Suspense>
     );
   }
 }
+
+const contentClass = mergeStyles([
+  {
+    width: "100vw",
+    height: "calc(100vh - 4em)",
+  },
+]);
