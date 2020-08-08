@@ -2,6 +2,7 @@ import * as React from "react";
 
 import { withTranslation, WithTranslation } from "react-i18next";
 import { Stack, TextField } from "@fluentui/react";
+import "../../theme";
 
 import Git, { GitBakers } from "react-git-provider";
 

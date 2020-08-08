@@ -8,6 +8,7 @@ import {
   BranchCurrentOptions,
   BranchListOptions,
   CommitHistoryOptions,
+  DirectoryCompareOptions,
   DirectoryReadOptions,
   DirectoryStatusOptions,
   FileReadAtOptions,
@@ -17,6 +18,7 @@ import {
   TagListOptions,
   Branch,
   BranchList,
+  CompareStatus,
 } from "./Queries";
 import git, {
   PromiseFsClient,
@@ -47,6 +49,8 @@ import {
   RepositoryStageAndCommitParams,
   TagCreateParams,
   TagRemoveParams,
+  BranchRenameParams,
+  FileMoveParams,
 } from "./Commands";
 
 const notImplemented = (): any => {
@@ -68,7 +72,7 @@ export type GitUnboundCommand<T extends Record<string, any>, U> = (
 export type GitBaker<
   _T extends (keyof GitValues)[],
   U extends Record<string, any> = {}
-> = (options: U) => Promise<any>;
+> = (options: U, bake?: boolean) => Promise<any>;
 export type GitRequiring<_T extends (keyof GitBakers)[], T> = T;
 export type GitUpdating<
   _T extends (keyof GitBakers)[],
@@ -136,11 +140,10 @@ export interface GitCommands {
     [
       "branchList",
       "branchCurrent",
-      "existingPaths",
       "directoryRead",
       "directoryStatus",
       "fileRead",
-      "existingPaths",
+      "pathExists",
       "commitHistory"
     ],
     BranchRemoveParams,
@@ -150,14 +153,26 @@ export interface GitCommands {
     [
       "branchList",
       "branchCurrent",
-      "existingPaths",
       "directoryRead",
       "directoryStatus",
       "fileRead",
-      "existingPaths",
+      "pathExists",
       "commitHistory"
     ],
     BranchSwitchParams,
+    void
+  >;
+  branchRename: GitUpdating<
+    [
+      "branchList",
+      "branchCurrent",
+      "directoryRead",
+      "directoryStatus",
+      "fileRead",
+      "pathExists",
+      "commitHistory"
+    ],
+    BranchRenameParams,
     void
   >;
   branchCheckout: GitUpdating<
@@ -166,12 +181,12 @@ export interface GitCommands {
     void
   >;
   directoryMake: GitUpdating<
-    ["directoryRead", "directoryStatus", "existingPaths"],
+    ["directoryRead", "directoryStatus", "pathExists"],
     DirectoryMakeParams,
     boolean
   >;
   directoryRemove: GitUpdating<
-    ["directoryRead", "directoryStatus", "fileRead", "existingPaths"],
+    ["directoryRead", "directoryStatus", "fileRead", "pathExists"],
     DirectoryRemoveParams,
     boolean
   >;
@@ -181,16 +196,21 @@ export interface GitCommands {
     void
   >;
   fileRemove: GitUpdating<
-    ["directoryRead", "directoryStatus", "fileRead", "existingPaths"],
+    ["directoryRead", "directoryStatus", "fileRead", "pathExists"],
     FileRemoveParams,
     boolean
   >;
   fileStage: GitUpdating<["directoryStatus"], FileStageParams, void>;
   fileUnstage: GitUpdating<["directoryStatus"], FileUnstageParams, void>;
   fileWrite: GitUpdating<
-    ["fileRead", "existingPaths", "directoryStatus", "directoryRead"],
+    ["fileRead", "pathExists", "directoryStatus", "directoryRead"],
     FileWriteParams,
     boolean
+  >;
+  fileMove: GitUpdating<
+    ["fileRead", "pathExists", "directoryStatus", "directoryRead"],
+    FileMoveParams,
+    void
   >;
   remoteAdd: GitUpdating<["remoteList", "branchList"], RemoteAddParams, void>;
   remoteDelete: GitUpdating<
@@ -204,7 +224,7 @@ export interface GitCommands {
       "directoryRead",
       "directoryStatus",
       "fileRead",
-      "existingPaths",
+      "pathExists",
       "commitHistory"
     ],
     RepositoryCloneParams,
@@ -221,7 +241,7 @@ export interface GitCommands {
       "directoryRead",
       "directoryStatus",
       "fileRead",
-      "existingPaths",
+      "pathExists",
       "commitHistory"
     ],
     RepositoryInitParams,
@@ -233,7 +253,7 @@ export interface GitCommands {
       "directoryRead",
       "directoryStatus",
       "fileRead",
-      "existingPaths",
+      "pathExists",
       "commitHistory"
     ],
     RepositoryPullParams,
@@ -263,11 +283,13 @@ export const defaultGitCommands: () => GitCommands = () => ({
   branchCreate: notImplemented,
   branchRemove: notImplemented,
   branchSwitch: notImplemented,
+  branchRename: notImplemented,
   directoryMake: notImplemented,
   directoryRemove: notImplemented,
   branchCheckout: notImplemented,
   fileDiscardChanges: notImplemented,
   fileRemove: notImplemented,
+  fileMove: notImplemented,
   fileStage: notImplemented,
   fileUnstage: notImplemented,
   fileWrite: notImplemented,
@@ -289,9 +311,10 @@ export interface GitBakers {
   commitHistory: GitBaker<["commitHistory"], CommitHistoryOptions>;
   directoryRead: GitBaker<["fileTree"], DirectoryReadOptions>;
   directoryStatus: GitBaker<["fileStatusTree"], DirectoryStatusOptions>;
+  directoryCompare: GitBaker<["directoryCompare"], DirectoryCompareOptions>;
   fileRead: GitBaker<["fileData"], FileReadOptions>;
   fileReadAt: GitBaker<["fileDataAt"], FileReadAtOptions>;
-  existingPaths: GitBaker<["existingPaths"], PathExistsOptions>;
+  pathExists: GitBaker<["pathExists"], PathExistsOptions>;
   remoteList: GitBaker<["remoteList"], RemoteListOptions>;
   tagList: GitBaker<["tagList"], TagListOptions>;
 }
@@ -302,9 +325,10 @@ export const defaultGitBakers: () => GitBakers = () => ({
   commitHistory: notImplemented,
   directoryRead: notImplemented,
   directoryStatus: notImplemented,
+  directoryCompare: notImplemented,
   fileRead: notImplemented,
   fileReadAt: notImplemented,
-  existingPaths: notImplemented,
+  pathExists: notImplemented,
   remoteList: notImplemented,
   tagList: notImplemented,
 });
@@ -319,9 +343,13 @@ export interface GitValues {
     ["directoryStatus"],
     { [path: string]: FileStatus }
   >;
-  fileData: GitRequiring<["fileRead"], string>;
-  fileDataAt: GitRequiring<["fileReadAt"], string>;
-  existingPaths: GitRequiring<["existingPaths"], boolean>;
+  directoryCompare: GitRequiring<
+    ["directoryCompare"],
+    { [path: string]: CompareStatus }
+  >;
+  fileData: GitRequiring<["fileRead"], string | undefined>;
+  fileDataAt: GitRequiring<["fileReadAt"], string | undefined>;
+  pathExists: GitRequiring<["pathExists"], boolean>;
   commitHistory: GitRequiring<["commitHistory"], ReadCommitResult[]>;
 }
 
@@ -335,9 +363,10 @@ export const defaultGitValues: () => GitValues = () => ({
     children: [],
   },
   fileStatusTree: {},
+  directoryCompare: {},
   fileData: "",
   fileDataAt: "",
-  existingPaths: true,
+  pathExists: true,
   commitHistory: [],
   tagList: [],
 });
@@ -355,3 +384,23 @@ export const defaultGitContext: () => GitContext = () => ({
   bakers: defaultGitBakers(),
   values: defaultGitValues(),
 });
+
+export type AuthComponentProps = {
+  url: string;
+  auth: GitAuth;
+  onLoginAttempt: (auth: GitAuth) => void;
+};
+
+export type AuthOptions =
+  | {
+      type: "set";
+      value: GitAuth;
+    }
+  | {
+      type: "getter";
+      getValue: () => Promise<GitAuth>;
+    }
+  | {
+      type: "element";
+      value: React.ComponentType<AuthComponentProps>;
+    };

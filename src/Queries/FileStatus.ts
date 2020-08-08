@@ -42,7 +42,7 @@ export function fileStatus(
         type: objectType,
         basename: base,
         dirname: dir,
-        ignored: (ignore || [".git", ".gitkeep"]).includes(path),
+        ignored: (ignore || [".git"]).includes(path),
         status: status,
       };
     } catch (e) {

@@ -16,10 +16,13 @@ import {
   Layer,
 } from "@fluentui/react";
 import { GitAuth } from "isomorphic-git";
+import "../../theme";
 
 export interface AuthProps {
+  url: string;
   auth: GitAuth;
   onLoginAttempt: (auth: GitAuth) => void;
+  behaviour?: "gitlab";
 }
 
 export interface AuthState {
@@ -60,9 +63,33 @@ class Auth extends React.Component<AuthProps & WithTranslation, AuthState> {
   }
 
   componentDidMount() {
-    this.state.username !== "" &&
-      this.state.password !== "" &&
-      this.handleLoginAttempt();
+    if (this.props.behaviour === undefined) {
+      this.state.username !== "" &&
+        this.state.password !== "" &&
+        this.handleLoginAttempt();
+    } else if (this.props.behaviour === "gitlab") {
+      this.doGitlabAuth();
+    }
+  }
+
+  @bind
+  doGitlabAuth() {
+    const authorizePath = "/oauth/authorize";
+    const targetUrl = new URL(authorizePath, this.props.url);
+    targetUrl.searchParams.set(
+      "client_id",
+      "f585b157feb0bcffaddd5b885f369593898f31f2f6f6e42c8db7390e7f1321f1"
+    );
+    targetUrl.searchParams.set("redirect_url", "http://localhost/");
+    targetUrl.searchParams.set("state", "AUTH");
+    targetUrl.searchParams.set("response_type", "code");
+    targetUrl.searchParams.set(
+      "scope",
+      "api read_user read_repository write_repository"
+    );
+    console.log(targetUrl.toString());
+
+    window.location.replace(targetUrl.toString());
   }
 
   @bind

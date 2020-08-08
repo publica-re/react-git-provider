@@ -1,6 +1,8 @@
 import * as React from "react";
 import bind from "bind-decorator";
 
+import "../../theme";
+
 import { withTranslation, WithTranslation, Trans } from "react-i18next";
 import { TextField, PrimaryButton, Stack, mergeStyles } from "@fluentui/react";
 
@@ -96,6 +98,7 @@ const contentClass = mergeStyles([
   {
     display: "flex",
     flex: "1",
+    height: "100%",
   },
 ]);
 

@@ -12,7 +12,9 @@
     "changes": "État des changements",
     "history": "Historique",
     "file-pick": "Choisir un fichier",
-    "directory-pick": "Choisir un dossier"
+    "directory-pick": "Choisir un dossier",
+    "diff": "Comparer",
+    "close": "Fermer"
   },
   "auth": {
     "username": "Nom d'utilisateur",
@@ -39,8 +41,8 @@
       "date": "Date"
     },
     "action": {
-      "rebase": "Rebaser la branche actuelle ici",
-      "revert": "Annuler les modifications jusqu'ici",
+      "rebase": "Oublier les modifications jusqu'ici",
+      "revert": "Revenir à cette version",
       "new-branch": "Créer une nouvelle branche ici",
       "diff": "Comparer",
       "diff-left": "Comparer à gauche",
@@ -56,7 +58,8 @@
       "stage": "Suivre tout",
       "unstage": "Arrêter tout le suivi",
       "collapse": "Réduire",
-      "expand": "Étendre"
+      "expand": "Étendre",
+      "new-name": "Nouveau nom"
     },
     "file": {
       "new": "Nouveau fichier",
@@ -68,11 +71,19 @@
       "delete": "Supprimer",
       "discard-changes": "Abandonner les modifications",
       "stage": "Suivre",
-      "unstage": "Arrêter le suivi"
+      "unstage": "Arrêter le suivi",
+      "new-name": "Nouveau nom"
+    },
+    "branch": {
+      "delete": "Supprimer",
+      "rename": "Renommer",
+      "new-branch-title": "Nom de la nouvelle branche",
+      "new-title": "Nouveau nom"
     },
     "force-merge": "Forcer la fusion",
     "merge": "Fusionner",
-    "diff": "Comparer"
+    "diff": "Comparer",
+    "top": "Remonter"
   },
   "status": {
     "staged": "Suivi",
@@ -86,5 +97,40 @@
     "added": "Ajouté",
     "absent": "Absent",
     "restored-modified": "Restauré et modifié"
+  },
+  "diff": {
+    "mode": "Mode de comparaison",
+    "chars": "Caractères",
+    "words": "Mots",
+    "words-space": "Mots et espaces",
+    "sentences": "Phrases",
+    "lines": "Lignes",
+    "trimmed-lines": "Lignes réduites",
+    "css": "CSS",
+    "json": "JSON",
+    "right-only": "Existe uniquement à droite",
+    "left-only": "Existe uniquement à gauche",
+    "unchanged": "Pas modifié",
+    "changed": "Modifié",
+    "absent": "Inexistant"
+  },
+  "type": {
+    "directory": "Dossier",
+    "file": "Fichier"
+  },
+  "dialog": {
+    "abort": "Annuler",
+    "choose": "Choisir",
+    "confirm": "Confirmer",
+    "cancel": "Annuler"
+  },
+  "error": {
+    "branch": {
+      "delete-not-enough": "Vous devez avoir au moins une branche dans votre dépôt.",
+      "unique": "Deux branches ne peuvent pas porter le même nom."
+    },
+    "file": {
+      "already-exists": "Le fichier existe déjà."
+    }
   }
 }

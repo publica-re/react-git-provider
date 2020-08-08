@@ -23,11 +23,21 @@ export function directoryRemove(
         return await fileRemove(internal)({ path: object.path });
       }
       await Promise.all(
-        object.children.map((obj) => directoryRemoveHelperHelper(obj))
+        object.children.map(
+          async (obj) => await directoryRemoveHelperHelper(obj)
+        )
       );
+      console.log(object.children);
+
       return await internal.fs.promises.rmdir(physicalPath);
     }
     const objects = await directoryRead(internal)({ path });
-    return await directoryRemoveHelperHelper(objects);
+    console.log(objects);
+
+    await directoryRemoveHelperHelper(objects);
+    const newObjects = await directoryRead(internal)({ path });
+    console.log(objects, newObjects);
+
+    return true;
   };
 }

@@ -12,8 +12,9 @@ import {
 } from "@fluentui/react";
 
 import { GitStatusOption } from "react-git-provider";
+import "../../theme";
 
-import { gitStagedToIcon, gitStatusToIcon } from "./_utils";
+import { Utils } from "..";
 
 type TreeViewData = {
   id: string;
@@ -22,7 +23,7 @@ type TreeViewData = {
   details?: any;
 };
 
-export interface TreeViewHelperProps {
+export interface TreeRenderProps {
   data: TreeViewData;
   onStageFile: (path: string) => void;
   onStageDirectory: (path: string) => void;
@@ -37,20 +38,21 @@ export interface TreeViewHelperProps {
   onRenameFile: (path: string) => void;
   onRenameDirectory: (path: string) => void;
   onUploadFile: (path: string) => void;
+  onDropFile: (path: string) => void;
   onDiscard: (path: string) => void;
   onEdit: (path: string) => void;
   contextMenu?: boolean;
 }
 
-export interface TreeViewHelperState {
+export interface TreeRenderState {
   isOpen: boolean;
 }
 
-class TreeViewHelper extends React.Component<
-  TreeViewHelperProps & WithTranslation,
-  TreeViewHelperState
+class TreeRender extends React.Component<
+  TreeRenderProps & WithTranslation,
+  TreeRenderState
 > {
-  constructor(props: TreeViewHelperProps & WithTranslation) {
+  constructor(props: TreeRenderProps & WithTranslation) {
     super(props);
 
     this.state = {
@@ -108,22 +110,26 @@ class TreeViewHelper extends React.Component<
         iconProps: { iconName: "SetAction" },
         subMenuProps: {
           items: [
-            {
-              key: "rename",
-              text: t("action.file.rename"),
-              iconProps: {
-                iconName: "Rename",
-              },
-              onClick: () => this.props.onRenameDirectory(id),
-            },
-            {
-              key: "move",
-              text: t("action.file.move"),
-              iconProps: {
-                iconName: "FabricMovetoFolder",
-              },
-              onClick: () => this.props.onMoveDirectory(id),
-            },
+            ...(id !== "/"
+              ? [
+                  {
+                    key: "rename",
+                    text: t("action.file.rename"),
+                    iconProps: {
+                      iconName: "Rename",
+                    },
+                    onClick: () => this.props.onRenameDirectory(id),
+                  },
+                  {
+                    key: "move",
+                    text: t("action.file.move"),
+                    iconProps: {
+                      iconName: "FabricMovetoFolder",
+                    },
+                    onClick: () => this.props.onMoveDirectory(id),
+                  },
+                ]
+              : []),
             {
               key: "download",
               text: t("action.directory.download"),
@@ -258,46 +264,61 @@ class TreeViewHelper extends React.Component<
   }
 
   render() {
-    const { name, details, children } = this.props.data;
+    const { name, details, children, id } = this.props.data;
     const isDir = children !== undefined;
     if (isDir) {
       const { isOpen } = this.state;
       return (
         <Stack className={contentClass}>
-          <Stack horizontal>
-            <CommandBarButton
-              iconProps={{
-                iconName: isOpen ? "ChevronDown" : "ChevronUp",
-              }}
-              onDoubleClick={() =>
-                this.setState(({ isOpen }) => ({ isOpen: !isOpen }))
-              }
-              className={titleClass}
-              menuProps={
-                (this.props.contextMenu !== false && {
-                  items: this.renderDirContextMenu(),
-                }) ||
-                undefined
-              }
-            >
-              {name}
-            </CommandBarButton>
-          </Stack>
-          {isOpen &&
-            (children as TreeViewData[]).map((child) => (
-              <TranslatedTreeViewHelper
-                {...this.props}
-                data={child}
-                key={child.id}
-              />
-            ))}
+          <div
+            onDrop={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              event.persist();
+              this.props.onDropFile(id);
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+            }}
+            className="dropZone"
+          >
+            <Stack horizontal>
+              <CommandBarButton
+                iconProps={{
+                  iconName: isOpen ? "ChevronDown" : "ChevronUp",
+                }}
+                onDoubleClick={() =>
+                  this.setState(({ isOpen }) => ({ isOpen: !isOpen }))
+                }
+                className={titleClass}
+                menuProps={
+                  (this.props.contextMenu !== false && {
+                    items: this.renderDirContextMenu(),
+                  }) ||
+                  undefined
+                }
+              >
+                {name}
+              </CommandBarButton>
+            </Stack>
+            {isOpen &&
+              (children as TreeViewData[]).map((child) => (
+                <TranslatedTreeRender
+                  {...this.props}
+                  data={child}
+                  key={child.id}
+                />
+              ))}
+          </div>
         </Stack>
       );
     } else {
       const { onEdit } = this.props;
       const { id } = this.props.data;
-      const stageIcon = details?.status && gitStagedToIcon(details?.status);
-      const statusIcon = details?.status && gitStatusToIcon(details?.status);
+      const stageIcon =
+        details?.status && Utils.functions.gitStagedToIcon(details?.status);
+      const statusIcon =
+        details?.status && Utils.functions.gitStatusToIcon(details?.status);
       const isDeleted = details?.status?.option === GitStatusOption.Deleted;
       const isAdded = details?.status?.option === GitStatusOption.Added;
       return (
@@ -346,9 +367,9 @@ class TreeViewHelper extends React.Component<
   }
 }
 
-const TranslatedTreeViewHelper = withTranslation("translation")(TreeViewHelper);
+const TranslatedTreeRender = withTranslation("translation")(TreeRender);
 
-export default TranslatedTreeViewHelper;
+export default TranslatedTreeRender;
 
 const theme = getTheme();
 const contentClass = mergeStyles([

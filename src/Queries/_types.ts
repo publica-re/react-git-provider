@@ -36,3 +36,28 @@ export type Branch = string;
 export interface BranchList {
   [remote: string]: Branch[];
 }
+
+export type CompareStatus =
+  | {
+      type: "unchanged";
+    }
+  | {
+      type: "absent";
+    }
+  | {
+      type: "left-only";
+      isBinary: boolean;
+      leftContent: string | (() => Promise<Uint8Array>);
+    }
+  | {
+      type: "right-only";
+      rightContent: string;
+      rightIsBinary: boolean;
+    }
+  | {
+      type: "changed";
+      leftContent: string;
+      rightContent: string;
+      leftIsBinary: boolean;
+      rightIsBinary: boolean;
+    };

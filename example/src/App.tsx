@@ -1,72 +1,59 @@
-import React, { Suspense } from "react";
-import Git from "react-git-provider";
+import React from "react";
+import bind from "bind-decorator";
 import "./i18n";
-import { Loader, ActionMenu, Auth, Editor } from "./Components";
+import { View, Dialog, TaskBar } from "./Components";
 
-import { Fabric, Stack, Layer, mergeStyles } from "@fluentui/react";
-
-import { initializeIcons } from "office-ui-fabric-react/lib/Icons";
-
-initializeIcons();
+import { DefaultButton } from "@fluentui/react";
 
 export interface AppState {
-  directoryPath: string;
   filePath: string | null;
+  filePickerOpen: boolean;
 }
 
 export default class App extends React.Component<{}, AppState> {
   constructor(props: {}) {
     super(props);
     this.state = {
-      directoryPath: "/",
       filePath: null,
+      filePickerOpen: false,
     };
-    this.setDirectoryPath = this.setDirectoryPath.bind(this);
-    this.setFilePath = this.setFilePath.bind(this);
   }
 
-  setDirectoryPath(newPath: string) {
-    this.setState({ directoryPath: newPath });
-  }
-
+  @bind
   setFilePath(newPath: string) {
-    this.setState({ filePath: newPath });
+    this.setState({ filePath: newPath }, this.closeFilePicker);
+  }
+
+  @bind
+  openFilePicker() {
+    this.setState({ filePickerOpen: true });
+  }
+
+  @bind
+  closeFilePicker() {
+    this.setState({ filePickerOpen: false });
   }
 
   render() {
     return (
-      <Suspense fallback="loading">
-        <Git.Provider
-          uri={"https://git.publica.re/demo/work.git"}
-          corsProxy={"http://localhost:9415"}
-          author={{ name: "demo", email: "demo@publica.re" }}
-          basepath={"/test"}
-          loader={Loader}
-          auth={{ type: "element", value: Auth }}
-        >
-          <Fabric>
-            <Stack horizontal style={{ overflow: "hidden" }}>
-              <div className={contentClass}>
-                {this.state.filePath ? (
-                  <Editor filePath={this.state.filePath} />
-                ) : null}
-              </div>
-            </Stack>
-            <Layer>
-              <ActionMenu
-                onEdit={(path) => this.setState({ filePath: path })}
-              />
-            </Layer>
-          </Fabric>
-        </Git.Provider>
-      </Suspense>
+      <TaskBar
+        repositoryUri="https://git.publica.re/demo/work.git"
+        behaviour="gitlab"
+        onEdit={this.setFilePath}
+      >
+        {this.state.filePath ? (
+          <View.Editor filePath={this.state.filePath} />
+        ) : (
+          <DefaultButton onClick={this.openFilePicker}>
+            Ouvrir un fichier
+          </DefaultButton>
+        )}
+        <Dialog.FilePicker
+          isVisible={this.state.filePickerOpen}
+          onChoose={this.setFilePath}
+          onAbort={this.closeFilePicker}
+        />
+      </TaskBar>
     );
   }
 }
-
-const contentClass = mergeStyles([
-  {
-    width: "100vw",
-    height: "calc(100vh - 4em)",
-  },
-]);

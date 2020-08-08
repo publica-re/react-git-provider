@@ -7,9 +7,14 @@ import {
 } from "react-git-provider";
 import pathUtils from "path";
 
-import i18n from "../i18n";
+import i18n from "../../i18n";
 
 const t = i18n.t.bind(i18n);
+
+export function getAllDirs(tree: DirectoryList | FileList): string[] {
+  if (tree.type === "file") return [];
+  return [tree.path, ...tree.children.flatMap(getAllDirs)];
+}
 
 export function dataToTree(
   statusTree: { [path: string]: FileStatus },
@@ -159,4 +164,17 @@ export function gitStagedToIcon(status: GitStatus) {
       };
     }
   }
+}
+
+export function readFileAsync(file: File): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (res) => {
+      res.target && resolve(new Uint8Array(res.target.result as ArrayBuffer));
+    };
+    reader.onerror = (err) => reject(err);
+
+    reader.readAsArrayBuffer(file);
+  });
 }

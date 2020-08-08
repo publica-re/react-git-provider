@@ -7,6 +7,8 @@ export * from "./DirectoryRemove";
 export * from "./FileDiscardChanges";
 export * from "./FileRemove";
 export * from "./FileStage";
+export * from "./FileMove";
+export * from "./BranchRename";
 export * from "./FileUnstage";
 export * from "./FileWrite";
 export * from "./RemoteAdd";

@@ -9,11 +9,11 @@ export type FileReadAtOptions = {
 
 export function fileReadAt(
   internal: GitInternal
-): (options: FileReadAtOptions) => Promise<string> {
+): (options: FileReadAtOptions) => Promise<string | undefined> {
   return async function fileReadAtHelper({
     path,
     oid,
-  }: FileReadAtOptions): Promise<string> {
+  }: FileReadAtOptions): Promise<string | undefined> {
     const relativePath = pathUtils.relative("/", path);
     try {
       const { blob } = await internal.git.readBlob({
@@ -25,7 +25,7 @@ export function fileReadAt(
       return Buffer.from(blob).toString("utf8");
     } catch (e) {
       internal.events.error(e);
-      return "not found";
+      return undefined;
     }
   };
 }

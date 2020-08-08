@@ -1,6 +1,8 @@
 import * as React from "react";
 import bind from "bind-decorator";
 
+import "../../theme";
+
 import { withTranslation, WithTranslation } from "react-i18next";
 import {
   ShimmeredDetailsList,
@@ -16,9 +18,10 @@ import Git, {
   GitValues,
   GitBakers,
   GitCommands,
+  GitInternal,
 } from "react-git-provider";
 
-import Diff from "./Diff";
+import { View } from "..";
 
 interface RowType {
   oid: string;
@@ -46,7 +49,9 @@ const allColumns: LogColumn[] = [
 ];
 
 export interface LogProps {
+  prompt: (title: string, defaultValue: string) => Promise<string | false>;
   columns?: LogColumn[];
+  alert: (title: string) => Promise<boolean>;
 }
 
 export interface LogState {
@@ -118,12 +123,39 @@ class Log extends React.Component<LogProps & WithTranslation, LogState> {
 
   @bind
   async onNewBranch(oid: string): Promise<void> {
-    const { branchCreate, branchSwitch, branchCheckout } = this.context
-      .commands as GitCommands;
-    const name = prompt("Name of the new branch", oid) || oid;
-    await branchCreate({ ref: name });
-    await branchSwitch({ ref: name });
-    await branchCheckout({ oid: oid });
+    const { t } = this.props;
+    const { branchCreate, branchSwitch } = this.context.commands as GitCommands;
+    const name = await this.props.prompt(
+      t("action.branch.new-branch-title"),
+      oid
+    );
+    const { branchList: branchListBaker } = this.context.bakers as GitBakers;
+    const { branchList } = this.context.values as GitValues;
+    await branchListBaker({});
+    if (name !== false && !branchList["local"].includes(name)) {
+      const { git, fs, basepath } = this.context.internal as GitInternal;
+      await branchCreate({ ref: name });
+      await branchSwitch({ ref: name });
+      const ref = await git.resolveRef({
+        fs: fs,
+        dir: basepath,
+        ref: "HEAD",
+        depth: 2,
+      });
+      console.log(ref);
+
+      await git.writeRef({
+        fs,
+        dir: basepath,
+        ref: "HEAD",
+        value: ref,
+        force: true,
+        symbolic: true,
+      });
+      // await branchCheckout({ oid: oid, checkout: true, updateHead: true });
+    } else if (name !== false) {
+      this.props.alert(t("error.branch.unique"));
+    }
   }
 
   @bind
@@ -281,9 +313,15 @@ class Log extends React.Component<LogProps & WithTranslation, LogState> {
             this.state.currentFocus &&
             this.contextMenuTarget[this.state.currentFocus]
           }
-        ></ContextualMenu>
+        />
         {this.state.diff.left && this.state.diff.right && (
-          <Diff left={this.state.diff.left} right={this.state.diff.right} />
+          <View.Diff
+            left={this.state.diff.left}
+            right={this.state.diff.right}
+            onClose={() =>
+              this.setState({ diff: { left: undefined, right: undefined } })
+            }
+          />
         )}
       </React.Fragment>
     );

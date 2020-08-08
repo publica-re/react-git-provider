@@ -12,7 +12,8 @@
     "changes": "Changes",
     "history": "History",
     "file-pick": "Choose a file",
-    "directory-pick": "Choose a file"
+    "directory-pick": "Choose a file",
+    "diff": "Compare"
   },
   "auth": {
     "username": "User name",
@@ -39,8 +40,8 @@
       "date": "Date"
     },
     "action": {
-      "rebase": "Rebase current branch here",
-      "revert": "Revert changes until here",
+      "rebase": "Forget changes until here",
+      "revert": "Restore this state",
       "new-branch": "Create a new branch here",
       "diff": "Compare",
       "diff-left": "Left-hand-side",
@@ -56,7 +57,8 @@
       "stage": "Stage all",
       "unstage": "Unstage all",
       "collapse": "Collapse",
-      "expand": "Expand"
+      "expand": "Expand",
+      "new-name": "New name"
     },
     "file": {
       "new": "New file",
@@ -68,11 +70,20 @@
       "delete": "Remove",
       "discard-changes": "Discard changes",
       "stage": "Stage",
-      "unstage": "Unstage"
+      "unstage": "Unstage",
+      "new-name": "New name"
+    },
+    "branch": {
+      "delete": "Remove",
+      "rename": "Rename",
+      "new-branch-title": "New branch name",
+      "new-title": "New title"
     },
     "force-merge": "Force merge",
     "merge": "Merge",
-    "diff": "Compare"
+    "diff": "Compare",
+    "close": "Close",
+    "top": "Top"
   },
   "status": {
     "staged": "Staged",
@@ -86,5 +97,40 @@
     "added": "Added",
     "absent": "Absent",
     "restored-modified": "Restored and modified"
+  },
+  "diff": {
+    "mode": "Comparison mode",
+    "chars": "Chars",
+    "words": "Words",
+    "words-space": "Words and spaces",
+    "sentences": "Sentences",
+    "lines": "Lines",
+    "trimmed-lines": "Trimmed lines",
+    "css": "CSS",
+    "json": "JSON",
+    "right-only": "Exists only on the right-hand-side",
+    "left-only": "Exists only on the left-hand-side",
+    "unchanged": "Not modified",
+    "changed": "Changed",
+    "absent": "Absent"
+  },
+  "type": {
+    "directory": "Directory",
+    "file": "File"
+  },
+  "dialog": {
+    "abort": "Abort",
+    "choose": "Choose",
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
+  "error": {
+    "branch": {
+      "delete-not-enough": "You need at least one branch in your repository.",
+      "unique": "Two branches cannot have the same name."
+    },
+    "file": {
+      "already-exists": "File already exists."
+    }
   }
 }

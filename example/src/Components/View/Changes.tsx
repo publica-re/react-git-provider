@@ -4,9 +4,9 @@ import bind from "bind-decorator";
 import { withTranslation, WithTranslation } from "react-i18next";
 
 import Git, { GitCommands, GitValues } from "react-git-provider";
+import "../../theme";
 
-import { changeTree } from "./_utils";
-import TreeViewHelper from "./TreeViewHelper";
+import { Utils } from "..";
 
 export interface ChangesProps {}
 
@@ -42,7 +42,7 @@ class Changes extends React.Component<
 
   render() {
     const { fileStatusTree, fileTree } = this.context.values as GitValues;
-    const changeTreeData = changeTree(fileStatusTree, fileTree);
+    const changeTreeData = Utils.functions.changeTree(fileStatusTree, fileTree);
     const nullActions = {
       onStageFile: this.onStage,
       onStageDirectory: () => null,
@@ -57,17 +57,18 @@ class Changes extends React.Component<
       onRenameFile: () => null,
       onRenameDirectory: () => null,
       onUploadFile: () => null,
+      onDropFile: () => null,
       onDiscard: () => null,
       onEdit: () => null,
     };
     return (
       <React.Fragment>
-        <TreeViewHelper
+        <Utils.TreeRender
           {...nullActions}
           data={changeTreeData.staged}
           contextMenu={false}
         />
-        <TreeViewHelper
+        <Utils.TreeRender
           data={changeTreeData.notStaged}
           {...nullActions}
           contextMenu={false}

@@ -12,10 +12,11 @@ import {
   PanelType,
   Separator,
 } from "@fluentui/react";
+import "../theme";
 
-import Git, { GitBakers, GitValues, GitCommands } from "react-git-provider";
+import Git from "react-git-provider";
 
-import { Changes, Tree, Log, Branch, QuickCommit, QuickMerge } from ".";
+import { View, Quick, Dialog } from ".";
 
 export interface ActionMenuProps {
   onEdit: (path: string) => void;
@@ -26,6 +27,20 @@ export interface ActionMenuState {
   fileTreeOpen: boolean;
   historyPanelOpen: boolean;
   modifiedKeyDown: boolean;
+  prompt?: {
+    title: string;
+    defaultValue: string;
+    value?: string;
+  };
+  alert?: {
+    title: string;
+    canChoose: boolean;
+    result?: boolean;
+  };
+  pick?: {
+    type: "file" | "dir";
+    path?: string;
+  };
 }
 
 class ActionMenu extends React.Component<
@@ -42,14 +57,14 @@ class ActionMenu extends React.Component<
       fileTreeOpen: false,
       historyPanelOpen: false,
       modifiedKeyDown: false,
+      prompt: undefined,
+      alert: undefined,
+      pick: undefined,
     };
   }
 
   @bind
   async componentDidMount() {
-    const { branchList, branchCurrent } = this.context.bakers as GitBakers;
-    await branchList({});
-    await branchCurrent({});
     document.addEventListener("keydown", (event) =>
       this.setState({ modifiedKeyDown: event.ctrlKey })
     );
@@ -59,13 +74,144 @@ class ActionMenu extends React.Component<
   }
 
   @bind
-  async actionSwitchBranch(key: string) {
-    const { branchList } = this.context.values as GitValues;
-    const { branchCreate, branchSwitch } = this.context.commands as GitCommands;
-    if (!branchList["local"].includes(key)) {
-      await branchCreate({ ref: key });
+  async doPrompt(title: string, defaultValue: string): Promise<string | false> {
+    this.setState({
+      prompt: { title, defaultValue, value: undefined },
+    });
+    while (true) {
+      if (this.state.prompt !== undefined) break;
+      await new Promise((r) => setTimeout(r, 100));
     }
-    await branchSwitch({ ref: key });
+    while (true) {
+      if (this.state.prompt === undefined) break;
+      if (this.state.prompt.value !== undefined) break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    if (this.state.prompt?.value !== undefined) {
+      const value = this.state.prompt?.value;
+      this.setState({ prompt: undefined });
+      return value;
+    } else {
+      this.setState(() => ({
+        prompt: undefined,
+      }));
+      return false;
+    }
+  }
+
+  @bind
+  handlePromptChange(value: string) {
+    if (this.state.prompt !== undefined) {
+      this.setState({
+        prompt: {
+          ...this.state.prompt,
+          value: value,
+        },
+      });
+    }
+  }
+
+  @bind
+  handlePromptAbort() {
+    this.setState(() => ({
+      prompt: undefined,
+    }));
+  }
+
+  @bind
+  async doAlert(title: string, canChoose: boolean = false): Promise<boolean> {
+    this.setState({
+      alert: { title, canChoose },
+    });
+    while (true) {
+      if (this.state.alert !== undefined) break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    while (true) {
+      if (this.state.alert.result !== undefined) break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    if (this.state.alert?.result !== undefined) {
+      const value = this.state.alert?.result;
+      this.setState({ alert: undefined });
+      return value;
+    } else {
+      this.setState(() => ({
+        alert: undefined,
+      }));
+      return false;
+    }
+  }
+
+  @bind
+  handleAlertClose() {
+    if (this.state.alert !== undefined) {
+      this.setState({
+        alert: {
+          ...this.state.alert,
+          result: this.state.alert.canChoose ? false : true,
+        },
+      });
+    }
+  }
+
+  @bind
+  handleAlertConfirm() {
+    if (this.state.alert !== undefined) {
+      this.setState({
+        alert: {
+          ...this.state.alert,
+          result: true,
+        },
+      });
+    }
+  }
+
+  @bind
+  async doPick(type: "file" | "dir"): Promise<string | false> {
+    this.setState({
+      pick: { type, path: undefined },
+    });
+    while (true) {
+      if (this.state.pick !== undefined) break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    while (true) {
+      if (this.state.pick === undefined) break;
+      if (this.state.pick.path !== undefined) break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    if (this.state.pick?.path !== undefined) {
+      const value = this.state.pick?.path;
+      this.setState({ pick: undefined });
+      return value;
+    } else {
+      this.setState(() => ({
+        pick: undefined,
+      }));
+      return false;
+    }
+  }
+
+  @bind
+  handlePickAbort() {
+    if (this.state.pick !== undefined) {
+      this.setState({
+        pick: undefined,
+      });
+    }
+  }
+
+  @bind
+  handlePickChoose(path: string) {
+    if (this.state.pick !== undefined) {
+      this.setState({
+        pick: {
+          ...this.state.pick,
+          path: path,
+        },
+      });
+    }
   }
 
   private CustomPanel: React.FC<{
@@ -153,36 +299,36 @@ class ActionMenu extends React.Component<
           <Text>
             <Trans ns="translation" i18nKey="title.branch" />
           </Text>
-          <Branch
-            filter="local"
-            allowNewBranch={true}
-            selection={this.context.values.branchCurrent}
-            onSelect={this.actionSwitchBranch}
-          />
+          <Quick.Branch alert={this.doAlert} prompt={this.doPrompt} />
           <Separator vertical />
           <Text>
             <Trans ns="translation" i18nKey="title.merge" />
           </Text>
-          <QuickMerge />
+          <Quick.Merge />
           <Separator vertical />
           <Text>
             <Trans ns="translation" i18nKey="title.commit" />
           </Text>
-          <QuickCommit />
+          <Quick.Commit />
         </Stack>
         <CustomPanel
           header={t("title.changes")}
           openKey="changePanelOpen"
           type={PanelType.custom}
         >
-          <Changes />
+          <View.Changes />
         </CustomPanel>
         <CustomPanel
           header={t("title.tree")}
           openKey="fileTreeOpen"
           type={PanelType.customNear}
         >
-          <Tree onEdit={this.props.onEdit} />
+          <View.Tree
+            prompt={this.doPrompt}
+            alert={this.doAlert}
+            pickFile={this.doPick}
+            onEdit={this.props.onEdit}
+          />
         </CustomPanel>
         <CustomPanel
           header={t("title.history")}
@@ -190,8 +336,29 @@ class ActionMenu extends React.Component<
           type={PanelType.custom}
           width={"720px"}
         >
-          <Log />
+          <View.Log alert={this.doAlert} prompt={this.doPrompt} />
         </CustomPanel>
+        <Dialog.Prompt
+          isVisible={this.state.prompt !== undefined}
+          title={this.state.prompt?.title || ""}
+          defaultValue={this.state.prompt?.defaultValue || ""}
+          onChange={this.handlePromptChange}
+          onAbort={this.handlePromptAbort}
+        />
+        <Dialog.Alert
+          isVisible={this.state.alert !== undefined}
+          title={this.state.alert?.title || ""}
+          onClose={this.handleAlertClose}
+          onConfirm={
+            this.state.alert?.canChoose ? this.handleAlertConfirm : undefined
+          }
+        />
+        <Dialog.FilePicker
+          isVisible={this.state.pick !== undefined}
+          pickType={this.state.pick?.type || "file"}
+          onAbort={this.handlePickAbort}
+          onChoose={this.handlePickChoose}
+        />
       </Stack>
     );
   }

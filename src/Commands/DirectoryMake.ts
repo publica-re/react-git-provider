@@ -2,6 +2,7 @@ import pathUtils from "path";
 
 import { GitInternal } from "../Types";
 import { pathExists } from "../Queries";
+import { fileWrite } from "./FileWrite";
 
 export type DirectoryMakeParams = {
   path: string;
@@ -18,6 +19,10 @@ export function directoryMake(
       return false;
     }
     await internal.fs.promises.mkdir(physicalPath);
+    await fileWrite(internal)({
+      path: pathUtils.join(path, ".gitkeep"),
+      content: "",
+    });
     return true;
   };
 }

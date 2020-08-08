@@ -3,6 +3,7 @@ import bind from "bind-decorator";
 
 import { withTranslation, WithTranslation } from "react-i18next";
 import { Stack, TextField, DefaultButton } from "@fluentui/react";
+import "../../theme";
 
 import Git, {
   FileStatus,
@@ -12,20 +13,20 @@ import Git, {
   GitCommands,
 } from "react-git-provider";
 
-export interface QuickCommitProps {}
+export interface CommitProps {}
 
-export interface QuickCommitState {
+export interface CommitState {
   message: string;
   modifiedKeyDown: boolean;
 }
 
-class QuickCommit extends React.Component<
-  QuickCommitProps & WithTranslation,
-  QuickCommitState
+class Commit extends React.Component<
+  CommitProps & WithTranslation,
+  CommitState
 > {
   static contextType = Git.Context;
 
-  constructor(props: QuickCommitProps & WithTranslation) {
+  constructor(props: CommitProps & WithTranslation) {
     super(props);
 
     this.state = {
@@ -102,4 +103,4 @@ class QuickCommit extends React.Component<
   }
 }
 
-export default withTranslation("translation")(QuickCommit);
+export default withTranslation("translation")(Commit);

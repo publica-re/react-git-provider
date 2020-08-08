@@ -5,12 +5,13 @@ import { withTranslation, WithTranslation } from "react-i18next";
 import { Stack, IconButton, getTheme, mergeStyles } from "@fluentui/react";
 
 import Git, { GitBakers } from "react-git-provider";
+import "../../theme";
 
-import { Branch } from ".";
+import { Widget } from "..";
 
-export interface QuickMergeProps {}
+export interface MergeProps {}
 
-export interface QuickMergeState {
+export interface MergeState {
   message: string;
   modifierKeyDown: boolean;
   leftToRight: boolean;
@@ -18,13 +19,10 @@ export interface QuickMergeState {
   rightTarget?: string;
 }
 
-class QuickMerge extends React.Component<
-  QuickMergeProps & WithTranslation,
-  QuickMergeState
-> {
+class Merge extends React.Component<MergeProps & WithTranslation, MergeState> {
   static contextType = Git.Context;
 
-  constructor(props: QuickMergeProps & WithTranslation) {
+  constructor(props: MergeProps & WithTranslation) {
     super(props);
 
     this.state = {
@@ -50,7 +48,7 @@ class QuickMerge extends React.Component<
     const { t } = this.props;
     return (
       <Stack horizontal>
-        <Branch
+        <Widget.Branch
           selection={this.state.leftTarget || "origin/master"}
           onSelect={(key) => this.setState({ leftTarget: key })}
         />
@@ -65,7 +63,7 @@ class QuickMerge extends React.Component<
           }}
           className={iconButtonClass}
         />
-        <Branch
+        <Widget.Branch
           selection={
             this.state.rightTarget ||
             `local/${this.context.values.branchCurrent}`
@@ -96,7 +94,7 @@ class QuickMerge extends React.Component<
   }
 }
 
-export default withTranslation("translation")(QuickMerge);
+export default withTranslation("translation")(Merge);
 
 const theme = getTheme();
 const iconButtonClass = mergeStyles([

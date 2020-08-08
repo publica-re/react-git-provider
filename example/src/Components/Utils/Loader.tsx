@@ -1,6 +1,5 @@
 import * as React from "react";
 
-import { withTranslation, WithTranslation } from "react-i18next";
 import {
   Overlay,
   Spinner,
@@ -9,6 +8,7 @@ import {
   getTheme,
   Layer,
 } from "@fluentui/react";
+import "../../theme";
 
 export interface LoaderProps {
   message: string;
@@ -16,21 +16,7 @@ export interface LoaderProps {
 
 export interface LoaderState {}
 
-const theme = getTheme();
-const overlayStyle: IOverlayStyles = {
-  root: {
-    backgroundColor: theme.palette.blackTranslucent40,
-    zIndex: 9999,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-};
-
-class Loader extends React.Component<
-  LoaderProps & WithTranslation,
-  LoaderState
-> {
+class Loader extends React.Component<LoaderProps, LoaderState> {
   render() {
     return (
       <Layer>
@@ -46,4 +32,15 @@ class Loader extends React.Component<
   }
 }
 
-export default withTranslation("translation")(Loader);
+export default Loader;
+
+const theme = getTheme();
+const overlayStyle: IOverlayStyles = {
+  root: {
+    backgroundColor: theme.palette.whiteTranslucent40,
+    zIndex: 9999,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+};

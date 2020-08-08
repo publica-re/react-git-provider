@@ -42,7 +42,7 @@ export function directoryRead(
         );
         const childrenObjects = objects.reduce(
           (prev: Promise<DirectoryList | FileList>[], obj: string) => {
-            if (!(ignore || [".git", ".gitkeep"]).includes(obj)) {
+            if (!(ignore || [".git"]).includes(obj)) {
               const objectPhysicalPath = pathUtils.join(path, obj);
               return [
                 ...prev,

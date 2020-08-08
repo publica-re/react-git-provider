@@ -7,6 +7,7 @@ import {
   IComboBox,
   IComboBoxOption,
 } from "@fluentui/react";
+import "../../theme";
 
 import Git, { GitBakers, GitValues } from "react-git-provider";
 

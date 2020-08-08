@@ -1,13 +1,9 @@
-export { default as Branch } from "./Branch";
-export { default as Remote } from "./Remote";
-export { default as Log } from "./Log";
-export { default as Auth } from "./Auth";
-export { default as Loader } from "./Loader";
-export { default as Tree } from "./Tree";
-export { default as Changes } from "./Changes";
+import * as Quick from "./Quick";
+import * as Dialog from "./Dialog";
+import * as View from "./View";
+import * as Widget from "./Widget";
+import * as Utils from "./Utils";
 export { default as ActionMenu } from "./ActionMenu";
-export { default as Editor } from "./Editor";
-export { default as Diff } from "./Diff";
-export { default as QuickMerge } from "./QuickMerge";
-export { default as QuickCommit } from "./QuickCommit";
-export { default as FilePicker } from "./FilePicker";
+export { default as TaskBar } from "./TaskBar";
+
+export { Quick, Dialog, View, Widget, Utils };

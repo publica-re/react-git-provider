@@ -9,11 +9,11 @@ export type FileReadOptions = {
 
 export function fileRead(
   internal: GitInternal
-): (options: FileReadOptions) => Promise<string | Uint8Array> {
+): (options: FileReadOptions) => Promise<string | Uint8Array | undefined> {
   return async function fileReadHelper({
     path,
     mode,
-  }: FileReadOptions): Promise<string | Uint8Array> {
+  }: FileReadOptions): Promise<string | Uint8Array | undefined> {
     const physicalPath = pathUtils.join(internal.basepath, path);
     try {
       return await internal.fs.promises.readFile(physicalPath, {
@@ -21,7 +21,7 @@ export function fileRead(
       });
     } catch (e) {
       internal.events.error(e);
-      return "not found";
+      return undefined;
     }
   };
 }
