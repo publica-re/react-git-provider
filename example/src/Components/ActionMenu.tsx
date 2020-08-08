@@ -13,13 +13,15 @@ import {
   Separator,
 } from "@fluentui/react";
 import "../theme";
+import * as API from "../API";
 
-import Git from "react-git-provider";
+import Git, { GitInternal } from "react-git-provider";
 
 import { View, Quick, Dialog } from ".";
 
 export interface ActionMenuProps {
   onEdit: (path: string) => void;
+  behaviour?: "gitlab";
 }
 
 export interface ActionMenuState {
@@ -41,6 +43,7 @@ export interface ActionMenuState {
     type: "file" | "dir";
     path?: string;
   };
+  api?: API.Abstract;
 }
 
 class ActionMenu extends React.Component<
@@ -65,6 +68,17 @@ class ActionMenu extends React.Component<
 
   @bind
   async componentDidMount() {
+    const { getAuth, url, setAuthor } = this.context.internal as GitInternal;
+    const auth = await getAuth("", {});
+    if (auth.password) {
+      this.setState({
+        api: new API.Gitlab(auth.password, url),
+      });
+      const author = await this.state.api?.userInfos();
+      if (author !== undefined) {
+        setAuthor(author);
+      }
+    }
     document.addEventListener("keydown", (event) =>
       this.setState({ modifiedKeyDown: event.ctrlKey })
     );

@@ -95,6 +95,8 @@ export interface GitInternal {
     name: string;
     email: string;
   };
+  setAuthor: (author: { name: string; email: string }) => void;
+  url: string;
   getAuth: (url: string, auth: GitAuth) => Promise<GitAuth>;
 }
 
@@ -126,6 +128,8 @@ export const defaultGitInternal: () => GitInternal = () => ({
     name: "react-git-provider",
     email: "dev@publica.re",
   },
+  url: "/",
+  setAuthor: notImplemented,
   async getAuth(): Promise<GitAuth> {
     return {
       username: prompt("User name") || undefined,

@@ -2,6 +2,7 @@ import React, { Suspense } from "react";
 import Git, { AuthComponentProps } from "react-git-provider";
 import "../i18n";
 import { ActionMenu, Utils, Dialog } from ".";
+import bind from "bind-decorator";
 
 import { Fabric, Stack, mergeStyles, getTheme } from "@fluentui/react";
 
@@ -36,15 +37,21 @@ class TaskBar extends React.Component<TaskBarProps, TaskBarState> {
     super(props);
     this.state = {
       repositoryPath: `/${btoa(this.props.repositoryUri)}`,
+      author: this.props.author,
     };
   }
 
   componentDidUpdate(prevProps: TaskBarProps) {
     if (prevProps.repositoryUri !== this.props.repositoryUri) {
-      this.setState({
-        repositoryPath: `/${btoa(this.props.repositoryUri)}`,
-      });
+      this.doSetup();
     }
+  }
+
+  @bind
+  doSetup() {
+    this.setState({
+      repositoryPath: `/${btoa(this.props.repositoryUri)}`,
+    });
   }
 
   render() {
@@ -56,7 +63,7 @@ class TaskBar extends React.Component<TaskBarProps, TaskBarState> {
         <Git.Provider
           uri={this.props.repositoryUri}
           corsProxy={this.props.corsProxy}
-          author={this.props.author || TaskBar.defaultAuthor}
+          author={this.state.author || TaskBar.defaultAuthor}
           basepath={this.state.repositoryPath}
           loader={Utils.Loader}
           auth={{ type: "element", value: AuthDialog }}
@@ -64,7 +71,10 @@ class TaskBar extends React.Component<TaskBarProps, TaskBarState> {
           <Fabric>
             <Stack>
               <div className={contentClass}>{this.props.children}</div>
-              <ActionMenu onEdit={this.props.onEdit} />
+              <ActionMenu
+                behaviour={this.props.behaviour}
+                onEdit={this.props.onEdit}
+              />
             </Stack>
           </Fabric>
         </Git.Provider>

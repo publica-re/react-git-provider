@@ -1,6 +1,6 @@
 import * as React from "react";
 import bind from "bind-decorator";
-
+import { generate as generateId } from "shortid";
 import { withTranslation, WithTranslation, Trans } from "react-i18next";
 import {
   Overlay,
@@ -17,6 +17,7 @@ import {
 } from "@fluentui/react";
 import { GitAuth } from "isomorphic-git";
 import "../../theme";
+import oauth2 from "client-oauth2";
 
 export interface AuthProps {
   url: string;
@@ -62,34 +63,39 @@ class Auth extends React.Component<AuthProps & WithTranslation, AuthState> {
     };
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     if (this.props.behaviour === undefined) {
       this.state.username !== "" &&
         this.state.password !== "" &&
         this.handleLoginAttempt();
     } else if (this.props.behaviour === "gitlab") {
-      this.doGitlabAuth();
+      await this.doGitlabAuth();
     }
   }
 
   @bind
-  doGitlabAuth() {
+  async doGitlabAuth() {
     const authorizePath = "/oauth/authorize";
+    localStorage.setItem("auth-state", generateId());
     const targetUrl = new URL(authorizePath, this.props.url);
-    targetUrl.searchParams.set(
-      "client_id",
-      "f585b157feb0bcffaddd5b885f369593898f31f2f6f6e42c8db7390e7f1321f1"
-    );
-    targetUrl.searchParams.set("redirect_url", "http://localhost/");
-    targetUrl.searchParams.set("state", "AUTH");
-    targetUrl.searchParams.set("response_type", "code");
-    targetUrl.searchParams.set(
-      "scope",
-      "api read_user read_repository write_repository"
-    );
-    console.log(targetUrl.toString());
-
-    window.location.replace(targetUrl.toString());
+    const authorizationUri = targetUrl.toString();
+    const gitlab = new oauth2({
+      clientId:
+        "6e5b150c2977a071e9ea60d76563f7f53bfcaa40b587000b9101a771bd02b522",
+      authorizationUri: authorizationUri,
+      redirectUri: window.location.href,
+      scopes: ["api", "read_user", "read_repository", "write_repository"],
+    });
+    try {
+      const token = await gitlab.token.getToken(window.location.href);
+      this.props.onLoginAttempt({
+        username: "oauth2",
+        password: token.accessToken,
+      });
+      window.location.hash = "";
+    } catch (e) {
+      window.location.assign(gitlab.token.getUri());
+    }
   }
 
   @bind
@@ -116,6 +122,7 @@ class Auth extends React.Component<AuthProps & WithTranslation, AuthState> {
 
   render() {
     const { t } = this.props;
+    if (this.props.behaviour === "gitlab") return null;
     return (
       <Layer>
         <Overlay styles={overlayStyle}>

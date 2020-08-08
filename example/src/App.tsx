@@ -3,7 +3,7 @@ import bind from "bind-decorator";
 import "./i18n";
 import { View, Dialog, TaskBar } from "./Components";
 
-import { DefaultButton } from "@fluentui/react";
+import { DefaultButton, mergeStyles } from "@fluentui/react";
 
 export interface AppState {
   filePath: string | null;
@@ -44,9 +44,11 @@ export default class App extends React.Component<{}, AppState> {
         {this.state.filePath ? (
           <View.Editor filePath={this.state.filePath} />
         ) : (
-          <DefaultButton onClick={this.openFilePicker}>
-            Ouvrir un fichier
-          </DefaultButton>
+          <div className={contentClass}>
+            <DefaultButton onClick={this.openFilePicker}>
+              Ouvrir un fichier
+            </DefaultButton>
+          </div>
         )}
         <Dialog.FilePicker
           isVisible={this.state.filePickerOpen}
@@ -57,3 +59,13 @@ export default class App extends React.Component<{}, AppState> {
     );
   }
 }
+
+const contentClass = mergeStyles([
+  {
+    width: "100vw",
+    height: "calc(100vh - 4em)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+]);
