@@ -1,9 +1,18 @@
 import { GitInternal } from "../Types";
 
+/**
+ * Parameters to delete a remote
+ */
 export type RemoteDeleteParams = {
+  /**
+   * Name of the remote
+   */
   name: string;
 };
 
+/**
+ * Delete a remote
+ */
 export function remoteDelete(
   internal: GitInternal
 ): (params: RemoteDeleteParams) => Promise<void> {

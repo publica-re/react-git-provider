@@ -1,13 +1,28 @@
 import { GitInternal } from "../Types";
 import { FetchResult } from "isomorphic-git";
 
+/**
+ * Parameter to fetch a repository
+ */
 export type RepositoryFetchParams = {
+  /**
+   * Remote name
+   */
   remote?: string;
+  /**
+   * Branch to fetch (if `undefined`, all branches are fetched)
+   */
   ref?: string;
 };
 
+/**
+ * Default origin
+ */
 export const defaultPullRemote = "origin";
 
+/**
+ * Fetch a repository
+ */
 export function repositoryFetch(
   internal: GitInternal
 ): (params: RepositoryFetchParams) => Promise<FetchResult> {

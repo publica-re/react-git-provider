@@ -61,34 +61,83 @@ import {
 import Emitter from "eventemitter3";
 import EventEmitter from "eventemitter3";
 
+/**
+ * (internal) a default function
+ *
+ * @hidden
+ */
 const notImplemented = (): any => {
   throw Error("not implemented");
 };
 
-export type Path = string;
+/**
+ * The default author that will be used if none is provided.
+ */
 export const defaultAuthor = {
   name: "react-git-provider",
   email: "dev@publica.re",
 };
 
+/**
+ * Internal object for fine manipulations. (for instance, implement new commands)
+ */
 export interface GitInternal {
+  /**
+   * The underlying file system
+   */
   fs: PromiseFsClient;
+  /**
+   * The git interface (see `isomorphic-git`)
+   */
   git: typeof git;
+  /**
+   * The http client (see `isomorphic-git`)
+   */
   http: HttpClient;
+  /**
+   * The CORS proxy url, if any (required for some providers like Gitea)
+   */
   corsProxy?: string;
-  basepath: Path;
+  /**
+   * The base path for the repository
+   */
+  basepath: string;
+  /**
+   * Messages and errors loggers
+   */
   loggers: {
     message: (message: string) => void;
     error: (error: string) => void;
   };
+  /**
+   * Remote url
+   */
   url: string;
+  /**
+   * The author of the commits
+   */
   author: AuthorType;
+  /**
+   * Change the author
+   */
   setAuthor: (author: AuthorType) => void;
+  /**
+   * Get the authentications
+   */
   getAuth: (url: string, auth: GitAuth) => Promise<GitAuth>;
+  /**
+   * Handle a successful authentication
+   */
   handleAuthSuccess: (url: string, auth: GitAuth) => void;
+  /**
+   * Handle an authentication failure
+   */
   handleAuthFailure: (url: string, auth: GitAuth) => void;
 }
 
+/**
+ * Empty internal (throws errors if called)
+ */
 export const defaultGitInternal: () => GitInternal = () => ({
   fs: {
     promises: {
@@ -126,6 +175,9 @@ export const defaultGitInternal: () => GitInternal = () => ({
   author: defaultAuthor,
 });
 
+/**
+ * IO return type (error handler)
+ */
 export type GitReturn<T = any> =
   | {
       type: "success";
@@ -133,20 +185,41 @@ export type GitReturn<T = any> =
     }
   | { type: "error"; message: Error };
 
+/**
+ * A write IO command
+ */
 export type GitWrite<
   Params,
   _Updates extends string[] | "ALL",
   Returns = void
 > = (params: Params) => Promise<GitReturn<Returns>>;
 
+/**
+ * A read IO command
+ */
 export type GitRead<Options, ValueType> = (
   options: Options
 ) => Promise<GitReturn<ValueType>>;
 
+/**
+ * All of the implemented IOs
+ */
 export interface GitIO {
+  /**
+   * IOs related to branches
+   */
   branch: {
+    /**
+     * Create a new branch
+     */
     create: GitWrite<BranchCreateParams, ["branch.list"]>;
+    /**
+     * Remove a given branch
+     */
     remove: GitWrite<BranchRemoveParams, ["branch.list"]>;
+    /**
+     * Rebase a branch on another or on a commit
+     */
     rebase: GitWrite<
       BranchRebaseParams,
       [
@@ -159,6 +232,9 @@ export interface GitIO {
       ],
       void
     >;
+    /**
+     * Merge a branch into another
+     */
     merge: GitWrite<
       BranchMergeParams,
       [
@@ -171,6 +247,9 @@ export interface GitIO {
       ],
       MergeResult | MergeConflictSolution[]
     >;
+    /**
+     * Checkout a branch or a commit into current branch
+     */
     checkout: GitWrite<
       BranchCheckoutParams,
       [
@@ -184,11 +263,17 @@ export interface GitIO {
       ],
       void
     >;
+    /**
+     * Rename a branch
+     */
     rename: GitWrite<
       BranchRenameParams,
       ["branch.current", "branch.list"],
       void
     >;
+    /**
+     * (internal) solves merge conflicts given a list of patches
+     */
     solveConflicts: GitWrite<
       BranchSolveConflictsParams,
       [
@@ -201,26 +286,59 @@ export interface GitIO {
       ],
       void
     >;
-    current: GitRead<BranchCurrentOptions, string | void>;
+    /**
+     * Get the current branch
+     */
+    current: GitRead<BranchCurrentOptions, string>;
+    /**
+     * List all branches (remote included)
+     */
     list: GitRead<BranchListOptions, BranchList>;
+    /**
+     * List all commits for the current branch
+     */
     commitHistory: GitRead<CommitHistoryOptions, ReadCommitResult[]>;
   };
+  /**
+   * All directory related IOs
+   */
   directory: {
+    /**
+     * Create a new directory
+     */
     make: GitWrite<
       DirectoryMakeParams,
       ["directory.read", "directory.status", "file.exists", "file.read"],
       boolean
     >;
+    /**
+     * Remote a given directory and its subdirectories
+     */
     remove: GitWrite<
       DirectoryRemoveParams,
       ["directory.read", "directory.status", "file.exists", "file.read"],
       boolean
     >;
+    /**
+     * List all files in a given directory
+     */
     read: GitRead<DirectoryReadOptions, DirectoryList | FileList>;
+    /**
+     * Returns the statuses of all files in a directory (and subdirectories)
+     */
     status: GitRead<DirectoryStatusOptions, DirectoryStatus>;
+    /**
+     * Compare a directory at two different commits
+     */
     compare: GitRead<DirectoryCompareOptions, DirectoryCompare>;
   };
+  /**
+   * File related IOs
+   */
   file: {
+    /**
+     * Discard changes to a file
+     */
     discardChanges: GitWrite<
       FileDiscardChangesParams,
       [
@@ -231,6 +349,9 @@ export interface GitIO {
         "file.exists"
       ]
     >;
+    /**
+     * Remove a file
+     */
     remove: GitWrite<
       FileRemoveParams,
       [
@@ -242,8 +363,17 @@ export interface GitIO {
       ],
       boolean
     >;
+    /**
+     * Statge a file
+     */
     stage: GitWrite<FileStageParams, ["directory.status", "file.status"]>;
+    /**
+     * Stage a directory
+     */
     unstage: GitWrite<FileUnstageParams, ["directory.status", "file.status"]>;
+    /**
+     * Write to a file
+     */
     write: GitWrite<
       FileWriteParams,
       [
@@ -255,6 +385,9 @@ export interface GitIO {
       ],
       boolean
     >;
+    /**
+     * Move a file
+     */
     move: GitWrite<
       FileMoveParams,
       [
@@ -265,17 +398,47 @@ export interface GitIO {
         "directory.status"
       ]
     >;
+    /**
+     * Read a file
+     */
     read: GitRead<FileReadOptions, string | Uint8Array | undefined>;
+    /**
+     * Read a file at a given commit or in a given branch
+     */
     readAt: GitRead<FileReadAtOptions, string | Uint8Array | undefined>;
+    /**
+     * Check if a file exists
+     */
     exists: GitRead<PathExistsOptions, boolean>;
+    /**
+     * Get a file's git status
+     */
     status: GitRead<FileStatusOptions, FileStatus>;
   };
+  /**
+   * Remote related IOs
+   */
   remote: {
+    /**
+     * Add a remote
+     */
     add: GitWrite<RemoteAddParams, ["remote.list", "branch.list"]>;
+    /**
+     * Delete a remote
+     */
     delete: GitWrite<RemoteDeleteParams, ["remote.list", "branch.list"]>;
+    /**
+     * List all remotes
+     */
     list: GitRead<RemoteListOptions, Remote[]>;
   };
+  /**
+   * Repository related IOs
+   */
   repository: {
+    /**
+     * Clone a repositry
+     */
     clone: GitWrite<
       RepositoryCloneParams,
       [
@@ -290,6 +453,9 @@ export interface GitIO {
         "file.exists"
       ]
     >;
+    /**
+     * Initialize a new repository
+     */
     init: GitWrite<
       RepositoryInitParams,
       [
@@ -304,12 +470,21 @@ export interface GitIO {
         "file.exists"
       ]
     >;
+    /**
+     * Commit changes
+     */
     commit: GitWrite<
       RepositoryCommitParams,
       ["directory.status", "file.status", "branch.commitHistory"],
       string
     >;
+    /**
+     * Fetch changes
+     */
     fetch: GitWrite<RepositoryFetchParams, ["branch.list"], FetchResult>;
+    /**
+     * Push changes
+     */
     push: GitWrite<
       RepositoryPushParams,
       [
@@ -320,18 +495,38 @@ export interface GitIO {
       ],
       PushResult
     >;
+    /**
+     * Stage all changes and commit
+     */
     stageAndCommit: GitWrite<
       RepositoryStageAndCommitParams,
       ["file.status", "directory.status", "branch.commitHistory"],
       string
     >;
   };
+  /**
+   * Tag related IOs
+   */
   tag: {
+    /**
+     * Create a new tag
+     */
     create: GitWrite<TagCreateParams, ["tag.list"]>;
+    /**
+     * Remove a given tag
+     */
     remove: GitWrite<TagRemoveParams, ["tag.list"]>;
+    /**
+     * List all tags
+     */
     list: GitRead<TagListOptions, string[]>;
   };
 }
+/**
+ * (internal) all options of readable data
+ *
+ * @hidden
+ */
 export type AllGitReadOptions = {
   branch: {
     current: BranchCurrentOptions;
@@ -382,49 +577,130 @@ export type GitReadOptions = Partial<{
   }>;
 }>;
 
+/**
+ * @hidden
+ */
 export type GitIONS = keyof GitIO;
+/**
+ * @hidden
+ */
 type GitNSval<T extends GitIONS> = GitIO[T];
+/**
+ * @hidden
+ */
 export type GitIOCall<T extends GitIONS> = keyof GitNSval<T>;
+/**
+ * @hidden
+ */
 export type GitIOFunction<
   T extends GitIONS,
   U extends GitIOCall<T>
 > = GitIO[T][U];
 
+/**
+ * @hidden
+ */
 export type GitReadOptionsNS = keyof AllGitReadOptions;
+/**
+ * @hidden
+ */
 type GitReadOptionsNSval<T extends GitReadOptionsNS> = AllGitReadOptions[T];
+/**
+ * @hidden
+ */
 export type GitReadOptionsCall<
   T extends GitReadOptionsNS
 > = keyof GitReadOptionsNSval<T>;
+/**
+ * @hidden
+ */
 export type GitReadOptionsOptions<
   T extends GitReadOptionsNS,
   U extends GitReadOptionsCall<T>
 > = AllGitReadOptions[T][U];
 
+/**
+ * All values that can be listened to.
+ */
 export type GitReadValues = Partial<{
+  /**
+   * Branch-related values
+   */
   branch: Partial<{
-    current: string | void;
+    /**
+     * The current branch
+     */
+    current: string;
+    /**
+     * All branches (inclusive remotes)
+     */
     list: BranchList;
+    /**
+     * A list of all commits
+     */
     commitHistory: ReadCommitResult[];
   }>;
+  /**
+   * Directory-related values
+   */
   directory: Partial<{
+    /**
+     * All files in a directory
+     */
     read: DirectoryList | FileList;
+    /**
+     * Git statuses of all files
+     */
     status: DirectoryStatus;
+    /**
+     * Compare a directory in two branches or at two commits
+     */
     compare: DirectoryCompare;
   }>;
+  /**
+   * File-reated values
+   */
   file: Partial<{
+    /**
+     * Read a file
+     */
     read: string | Uint8Array | undefined;
+    /**
+     * Read a file at a given commit
+     */
     readAt: string | Uint8Array | undefined;
+    /**
+     * Check if a file exists
+     */
     exists: boolean;
+    /**
+     * Git status of a file
+     */
     status: FileStatus;
   }>;
+  /**
+   * Remote-related values
+   */
   remote: Partial<{
+    /**
+     * List all remotes
+     */
     list: Remote[];
   }>;
+  /**
+   * Tag-related values
+   */
   tag: Partial<{
+    /**
+     * List all tags
+     */
     list: string[];
   }>;
 }>;
 
+/**
+ * Empty IO (throws errors if called)
+ */
 export const defaultGitIO: () => GitIO = () => ({
   branch: {
     create: notImplemented,
@@ -477,24 +753,55 @@ export const defaultGitIO: () => GitIO = () => ({
   },
 });
 
+/**
+ * A git context (provided by the provider)
+ */
 export interface GitContext {
+  /**
+   * Internal commands
+   */
   internal: GitInternal;
+  /**
+   * IO commands
+   */
   io: GitIO;
+  /**
+   * EventEmitter triggered when a write IO command is run
+   */
   emitter: Emitter;
 }
 
+/**
+ * A default context
+ */
 export const defaultGitContext: () => GitContext = () => ({
   internal: defaultGitInternal(),
   io: defaultGitIO(),
   emitter: new EventEmitter(),
 });
 
+/**
+ * Props for an authentication component.
+ *
+ * @param url  the url that needs to be authenticated
+ * @param auth the current auth (e.g. on failure)
+ * @param onLoginAttempt a callback to be triggered to attempt an authentication
+ */
 export type AuthComponentProps = {
   url: string;
   auth: GitAuth;
   onLoginAttempt: (auth: GitAuth) => void;
 };
 
+/**
+ * Auth getter types
+ *
+ * set = provide a static authentication
+ *
+ * getter = provide a function that returns an authentication
+ *
+ * element = provide a React element that triggers an authentication attempt (onLoginAttempt)
+ */
 export type AuthOptions =
   | {
       type: "set";
@@ -509,6 +816,9 @@ export type AuthOptions =
       value: React.ComponentType<AuthComponentProps>;
     };
 
+/**
+ * Default auth getter (with window.prompt)
+ */
 export const defaultAuth: AuthOptions = {
   type: "getter",
   async getValue(): Promise<GitAuth> {

@@ -1,9 +1,18 @@
 import { GitInternal } from "../Types";
 
+/**
+ * Parameters to initialize a repository
+ */
 export type RepositoryInitParams = {
+  /**
+   * Name of the default branch
+   */
   defaultBranch?: string;
 };
 
+/**
+ * Initialize a repository
+ */
 export function repositoryInit(
   internal: GitInternal
 ): (params: RepositoryInitParams) => Promise<void> {

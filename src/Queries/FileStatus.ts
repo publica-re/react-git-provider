@@ -5,11 +5,23 @@ import { GitInternal } from "../Types";
 import { FileStatus, GitStatus } from "./_types";
 import { gitStatusFromQuery } from "./_utils";
 
+/**
+ * Options to get a file's status
+ */
 export type FileStatusOptions = {
+  /**
+   * Path to the file
+   */
   path: string;
+  /**
+   * Files to ignore
+   */
   ignore?: string;
 };
 
+/**
+ * Get a file's status
+ */
 export function fileStatus(
   internal: GitInternal
 ): (options: FileStatusOptions) => Promise<FileStatus> {

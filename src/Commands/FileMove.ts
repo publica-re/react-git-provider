@@ -2,11 +2,23 @@ import pathUtils from "path";
 
 import { GitInternal } from "../Types";
 
+/**
+ *  Parameters to move a file
+ */
 export type FileMoveParams = {
+  /**
+   * Old path
+   */
   from: string;
+  /**
+   * New path
+   */
   to: string;
 };
 
+/**
+ * Move a file
+ */
 export function fileMove(
   internal: GitInternal
 ): (params: FileMoveParams) => Promise<void> {

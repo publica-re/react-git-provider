@@ -1,11 +1,26 @@
 import { GitInternal } from "../Types";
 
+/**
+ * Parameters to clone a repository
+ */
 export type RepositoryCloneParams = {
+  /**
+   * URL of the repository
+   */
   uri: string;
+  /**
+   * Should checkout and remove local changes
+   */
   noCheckout?: boolean;
+  /**
+   * Remote name
+   */
   remote?: string;
 };
 
+/**
+ * Clone a repository
+ */
 export function repositoryClone(
   internal: GitInternal
 ): (params: RepositoryCloneParams) => Promise<void> {

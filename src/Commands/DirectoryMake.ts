@@ -4,10 +4,19 @@ import { GitInternal } from "../Types";
 import { pathExists } from "../Queries";
 import { fileWrite } from "./FileWrite";
 
+/**
+ * Pameters to create a new directory
+ */
 export type DirectoryMakeParams = {
+  /**
+   * Path of the directory
+   */
   path: string;
 };
 
+/**
+ * Create a new directory
+ */
 export function directoryMake(
   internal: GitInternal
 ): (params: DirectoryMakeParams) => Promise<boolean> {

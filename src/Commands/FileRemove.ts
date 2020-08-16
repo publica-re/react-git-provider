@@ -2,10 +2,19 @@ import pathUtils from "path";
 
 import { GitInternal } from "../Types";
 
+/**
+ * Parameters to remove a file
+ */
 export type FileRemoveParams = {
+  /**
+   * Path to the file
+   */
   path: string;
 };
 
+/**
+ * Remove a file
+ */
 export function fileRemove(
   internal: GitInternal
 ): (params: FileRemoveParams) => Promise<boolean> {

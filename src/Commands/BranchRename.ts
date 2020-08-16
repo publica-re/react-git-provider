@@ -3,11 +3,23 @@ import { branchCreate } from "./BranchCreate";
 import { branchCheckout } from "./BranchCheckout";
 import { branchRemove } from "./BranchRemove";
 
+/**
+ * Parameters to rename a branch
+ */
 export type BranchRenameParams = {
+  /**
+   * Old name
+   */
   oldRef: string;
+  /**
+   * New name
+   */
   newRef: string;
 };
 
+/**
+ * Rename a branch
+ */
 export function branchRename(
   internal: GitInternal
 ): (params: BranchRenameParams) => Promise<void> {

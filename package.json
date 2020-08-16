@@ -31,7 +31,7 @@
     "test:watch": "react-scripts test --env=jsdom",
     "start-example": "cd example && yarn install && yarn start",
     "build-example": "cd example && yarn install && yarn build",
-    "docs": "typedoc --out docs src && yarn build-example && cp -R example/build docs/demo",
+    "docs": "typedoc --out docs src --stripInternal",
     "dev-serve-docs": "yarn docs && cd docs && python -m http.server"
   },
   "peerDependencies": {

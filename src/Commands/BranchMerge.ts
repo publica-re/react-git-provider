@@ -3,11 +3,23 @@ import { MergeResult } from "isomorphic-git";
 import { directoryCompare, MergeConflictSolution } from "../Queries";
 import { createPatch } from "diff";
 
+/**
+ * Parameters to merge a branch
+ */
 export type BranchMergeParams = {
+  /**
+   * The branch to merge from
+   */
   from: string;
+  /**
+   * The branch to merge into
+   */
   into: string;
 };
 
+/**
+ * Merge a branch
+ */
 export function branchMerge(
   internal: GitInternal
 ): (

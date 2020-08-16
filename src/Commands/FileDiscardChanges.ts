@@ -2,10 +2,19 @@ import pathUtils from "path";
 
 import { GitInternal } from "../Types";
 
+/**
+ * Parameters to discard a file
+ */
 export type FileDiscardChangesParams = {
+  /**
+   * Path to the file
+   */
   path: string;
 };
 
+/**
+ * Discard changes to a file
+ */
 export function fileDiscardChanges(
   internal: GitInternal
 ): (params: FileDiscardChangesParams) => Promise<void> {

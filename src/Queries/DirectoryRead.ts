@@ -3,6 +3,11 @@ import pathUtils from "path";
 import { DirectoryList, FileList } from "./_types";
 import { GitInternal } from "../Types";
 
+/**
+ * Return a formatted file
+ *
+ * @hidden
+ */
 function makeFile(path: string): FileList {
   return {
     type: "file",
@@ -10,6 +15,10 @@ function makeFile(path: string): FileList {
   };
 }
 
+/**
+ * Return a formatted directory
+ * @hidden
+ */
 function makeDir(
   path: string,
   children: (DirectoryList | FileList)[]
@@ -21,11 +30,23 @@ function makeDir(
   };
 }
 
+/**
+ * Options to read a directory
+ */
 export type DirectoryReadOptions = {
+  /**
+   * Path of the directory
+   */
   path: string;
+  /**
+   * Files to ignore
+   */
   ignore?: string[];
 };
 
+/**
+ * Read a directory
+ */
 export function directoryRead(
   internal: GitInternal
 ): (options: DirectoryReadOptions) => Promise<DirectoryList | FileList> {

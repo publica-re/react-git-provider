@@ -2,10 +2,19 @@ import pathUtils from "path";
 
 import { GitInternal } from "../Types";
 
+/**
+ * Parameters to stage a file
+ */
 export type FileStageParams = {
+  /**
+   * Path to the file
+   */
   path: string;
 };
 
+/**
+ * Stage a file
+ */
 export function fileStage(
   internal: GitInternal
 ): (params: FileStageParams) => Promise<void> {

@@ -1,12 +1,27 @@
 import { GitInternal } from "../Types";
 import { branchCurrent } from "../Queries";
 
+/**
+ * Parameters to rebase a branch
+ */
 export type BranchRebaseParams = {
+  /**
+   * The branch or the commit oid to rebase
+   */
   oid: string;
+  /**
+   * What branch to rebase (if `undefined`, will be the current branch)
+   */
   ref?: string;
+  /**
+   * If false, do not checkout
+   */
   noCheckout?: boolean;
 };
 
+/**
+ * Rebase a branch
+ */
 export function branchRebase(
   internal: GitInternal
 ): (params: BranchRebaseParams) => Promise<void> {

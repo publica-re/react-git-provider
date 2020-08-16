@@ -1,9 +1,18 @@
 import { GitInternal } from "../Types";
 
+/**
+ * Parameters to create a new branch
+ */
 export type BranchCreateParams = {
+  /**
+   * Name of the new branch.
+   */
   ref: string;
 };
 
+/**
+ * Create a branch
+ */
 export function branchCreate(
   internal: GitInternal
 ): (params: BranchCreateParams) => Promise<void> {

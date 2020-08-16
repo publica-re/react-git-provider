@@ -5,12 +5,27 @@ import { applyPatch } from "diff";
 import { branchCheckout } from "./BranchCheckout";
 import { repositoryStageAndCommit } from "./RepositoryStageAndCommit";
 
+/**
+ * Parameters to solve conflicts
+ */
 export type BranchSolveConflictsParams = {
+  /**
+   * List of all conflict actions
+   */
   mergeConflicts: MergeConflictSolution[];
+  /**
+   * Branch to merge from
+   */
   from: string;
+  /**
+   * Branch to merge into
+   */
   into: string;
 };
 
+/**
+ * Merge two branches solving conflicts
+ */
 export function branchSolveConflicts(
   internal: GitInternal
 ): (params: BranchSolveConflictsParams) => Promise<void> {

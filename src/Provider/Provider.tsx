@@ -63,24 +63,58 @@ import {
   remoteDelete,
 } from "../Commands";
 
+/**
+ * Props for the provider
+ */
 export interface GitProps {
+  /**
+   * The remote url
+   */
   url: string;
+  /**
+   * The CORS proxy (needed for some providers)
+   */
   corsProxy: string | false;
+  /**
+   * Where to clone into
+   */
   basepath: string;
+  /**
+   * The author of commis
+   */
   author: { name: string; email: string };
+  /**
+   * The authentication scheme
+   */
   auth: AuthOptions;
+  /**
+   * What to display when loading
+   */
   loader: React.ComponentType<{ message: string }>;
+  /**
+   * Message logger
+   */
   onMessage: (message: string) => void;
+  /**
+   * Error logger
+   */
   onError: (message: string) => void;
   children?: React.ReactNode;
 }
 
+/**
+ * @hidden
+ */
 export const defaultLoader = (({ message }): React.ReactNode => {
   return <span>{message}</span>;
 }) as React.FC<{ message: string }>;
 
+/**
+ * Default props if not defined
+ */
 export const defaultGitProps: () => Partial<GitProps> = () => ({
   basepath: "/",
+  corsProxy: "https://cors.isomorphic-git.org",
   author: defaultAuthor,
   auth: defaultAuth,
   loader: defaultLoader,
@@ -88,6 +122,11 @@ export const defaultGitProps: () => Partial<GitProps> = () => ({
   onError: (message: string): void => console.error("[GIT-CONSUMER]", message),
 });
 
+/**
+ * State of the authentication
+ *
+ * @internal
+ */
 export type GitAuthStatus =
   | {
       type: "none";
@@ -97,14 +136,39 @@ export type GitAuthStatus =
   | { type: "failed"; url: string; auth: GitAuth }
   | { type: "success"; url: string; auth: GitAuth };
 
+/**
+ * State of the provider
+ *
+ * @internal
+ */
 export interface GitState {
+  /**
+   * Is it loaded
+   */
   isLoaded: boolean;
+  /**
+   * Current auth status
+   */
   authStatus: GitAuthStatus;
+  /**
+   * All messages
+   */
   messageLog: string[];
+  /**
+   * All errors
+   */
   errorLog: string[];
+  /**
+   * Current author
+   */
   author: { name: string; email: string };
 }
 
+/**
+ * Default git state
+ *
+ * @internal
+ */
 export const defaultGitState: () => GitState = () => ({
   isLoaded: false,
   authStatus: { type: "none" },
@@ -113,10 +177,28 @@ export const defaultGitState: () => GitState = () => ({
   author: defaultGitInternal().author,
 });
 
+/**
+ * A Git provider
+ */
 export default class Provider extends React.Component<GitProps, GitState> {
+  /**
+   * The underlying file system.
+   *
+   * @internal
+   */
   private fs: PromiseFsClient = new FS(this.props.url);
+  /**
+   * The underlying emitters
+   *
+   * @internal
+   */
   private emitter: EventEmitter = new EventEmitter();
 
+  /**
+   * The default props
+   *
+   * @internal
+   */
   public static defaultProps = defaultGitProps();
 
   constructor(props: GitProps) {

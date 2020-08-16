@@ -3,11 +3,23 @@ import { WalkerEntry } from "isomorphic-git";
 import { nonPrintableChars } from "./_utils";
 import { CompareStatus, DirectoryCompare } from ".";
 
+/**
+ * Options to compare a directory at two commits
+ */
 export type DirectoryCompareOptions = {
+  /**
+   * First commit
+   */
   left: string;
+  /**
+   * Second commit
+   */
   right: string;
 };
 
+/**
+ * Compare a directory at two commits
+ */
 export function directoryCompare(
   internal: GitInternal
 ): (options: DirectoryCompareOptions) => Promise<DirectoryCompare> {

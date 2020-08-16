@@ -3,10 +3,19 @@ import { directoryStatus, GitStatusOption } from "../Queries";
 
 import { fileStage, repositoryCommit } from "./";
 
+/**
+ * Parameters to stage and commit all files
+ */
 export type RepositoryStageAndCommitParams = {
+  /**
+   * Commit message
+   */
   message: string;
 };
 
+/**
+ * Stage and commit all files
+ */
 export function repositoryStageAndCommit(
   internal: GitInternal
 ): (params: RepositoryStageAndCommitParams) => Promise<string> {

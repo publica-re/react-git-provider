@@ -1,10 +1,19 @@
 import { GitInternal } from "../Types";
 import { directoryStatus } from "../Queries";
 
+/**
+ * Parameters to commit staged changes
+ */
 export type RepositoryCommitParams = {
+  /**
+   * Commit message
+   */
   message: string;
 };
 
+/**
+ * Commit staged changes.
+ */
 export function repositoryCommit(
   internal: GitInternal
 ): (params: RepositoryCommitParams) => Promise<string> {
