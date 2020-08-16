@@ -14,7 +14,11 @@
     "file-pick": "Choisir un fichier",
     "directory-pick": "Choisir un dossier",
     "diff": "Comparer",
-    "close": "Fermer"
+    "close": "Fermer",
+    "issues": "Tickets",
+    "merge-requests": "Demandes de fusion",
+    "profile": "Profil",
+    "sign-out": "Déconnexion"
   },
   "auth": {
     "username": "Nom d'utilisateur",
@@ -41,8 +45,9 @@
       "date": "Date"
     },
     "action": {
-      "rebase": "Oublier les modifications jusqu'ici",
-      "revert": "Revenir à cette version",
+      "ammend": "Oublier l'historique, conserver les modifications",
+      "revert": "Garder l'historique, restaurer l'état",
+      "rebase": "Oublier l'historique, restaurer l'état",
       "new-branch": "Créer une nouvelle branche ici",
       "diff": "Comparer",
       "diff-left": "Comparer à gauche",
@@ -52,6 +57,7 @@
   "action": {
     "new": "Nouveau",
     "properties": "Propriétés",
+    "rebase": "Rebaser",
     "directory": {
       "new": "Nouveau dossier",
       "download": "Télécharger tout",
@@ -131,6 +137,18 @@
     },
     "file": {
       "already-exists": "Le fichier existe déjà."
+    },
+    "merge": {
+      "conflict": "Impossible de fusionner les deux branches.",
+      "conflict-continue": "Il y a des conflits lors de la fusion. Pour continuer, nous devons changer de branche, ce qui risque d'entraîner une perte de données sur la branche actuelle sur des modifications non-suivies. Voulez-vous continuer ?",
+      "changes": "Vous avez des changements pas enregistrés. Validez les suivis ou annulez vos modifications avant.",
+      "push-conflicts": "La version distance est plus récente que la version locale. Voulez-vous tout de même continuer?"
     }
+  },
+  "merge": {
+    "accept": "Accepter les changements et fusionner"
+  },
+  "push": {
+    "not-allowed": "Vous n'êtes pas autorisé à pousser sur cette branche."
   }
 }

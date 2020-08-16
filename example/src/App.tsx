@@ -38,6 +38,7 @@ export default class App extends React.Component<{}, AppState> {
     return (
       <TaskBar
         repositoryUri="https://git.publica.re/demo/work.git"
+        corsProxy={false}
         behaviour="gitlab"
         onEdit={this.setFilePath}
       >

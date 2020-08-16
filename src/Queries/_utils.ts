@@ -18,8 +18,8 @@ export function gitStatusFromQuery(
     | "*undeleted"
     | "*undeletemodified"
 ): GitStatus {
-  const staged = status.startsWith("*");
-  const statusName = staged ? status.slice(1) : status;
+  const staged = !status.startsWith("*");
+  const statusName = status.replace(/^\*/, "");
   let option = GitStatusOption.Modified;
   switch (statusName) {
     case "modified":

@@ -1,23 +1,14 @@
 import * as React from "react";
-import bind from "bind-decorator";
-import { generate as generateId } from "shortid";
-import { withTranslation, WithTranslation, Trans } from "react-i18next";
-import {
-  Overlay,
-  IOverlayStyles,
-  TextField,
-  Stack,
-  getTheme,
-  mergeStyles,
-  Checkbox,
-  PrimaryButton,
-  MessageBar,
-  MessageBarType,
-  Layer,
-} from "@fluentui/react";
+import * as Intl from "react-i18next";
+import * as UI from "@fluentui/react";
+
 import { GitAuth } from "isomorphic-git";
+import bind from "bind-decorator";
+
+import Git from "react-git-provider";
+
+import * as API from "../../API";
 import "../../theme";
-import oauth2 from "client-oauth2";
 
 export interface AuthProps {
   url: string;
@@ -32,38 +23,23 @@ export interface AuthState {
   doRemember: boolean;
 }
 
-const theme = getTheme();
-const overlayStyle: IOverlayStyles = {
-  root: {
-    backgroundColor: theme.palette.blackTranslucent40,
-    zIndex: 9999,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-};
-
-const contentClass = mergeStyles([
-  {
-    backgroundColor: theme.palette.white,
-    color: theme.palette.blackTranslucent40,
-    width: "50vw",
-    padding: "50px",
-  },
-]);
-
-class Auth extends React.Component<AuthProps & WithTranslation, AuthState> {
-  constructor(props: AuthProps & WithTranslation) {
+class Auth extends Git.Component<AuthProps & Intl.WithTranslation, AuthState> {
+  constructor(props: AuthProps & Intl.WithTranslation) {
     super(props);
 
+    const retrieveSaved = (name: string) =>
+      localStorage.getItem(`git-${name}`) || "";
+
     this.state = {
+      ...this.state,
       doRemember: false,
-      username: localStorage.getItem(`git-username`) || "",
-      password: localStorage.getItem(`git-password`) || "",
+      username: retrieveSaved("username"),
+      password: retrieveSaved("password"),
     };
   }
 
   async componentDidMount() {
+    super.componentDidMount();
     if (this.props.behaviour === undefined) {
       this.state.username !== "" &&
         this.state.password !== "" &&
@@ -75,26 +51,11 @@ class Auth extends React.Component<AuthProps & WithTranslation, AuthState> {
 
   @bind
   async doGitlabAuth() {
-    const authorizePath = "/oauth/authorize";
-    localStorage.setItem("auth-state", generateId());
-    const targetUrl = new URL(authorizePath, this.props.url);
-    const authorizationUri = targetUrl.toString();
-    const gitlab = new oauth2({
-      clientId:
-        "6e5b150c2977a071e9ea60d76563f7f53bfcaa40b587000b9101a771bd02b522",
-      authorizationUri: authorizationUri,
-      redirectUri: window.location.href,
-      scopes: ["api", "read_user", "read_repository", "write_repository"],
-    });
-    try {
-      const token = await gitlab.token.getToken(window.location.href);
-      this.props.onLoginAttempt({
-        username: "oauth2",
-        password: token.accessToken,
-      });
-      window.location.hash = "";
-    } catch (e) {
-      window.location.assign(gitlab.token.getUri());
+    const authResult = await API.Gitlab.auth(this.props.url);
+    if (authResult !== false) {
+      this.props.onLoginAttempt(authResult);
+    } else {
+      return;
     }
   }
 
@@ -124,18 +85,18 @@ class Auth extends React.Component<AuthProps & WithTranslation, AuthState> {
     const { t } = this.props;
     if (this.props.behaviour === "gitlab") return null;
     return (
-      <Layer>
-        <Overlay styles={overlayStyle}>
+      <UI.Layer>
+        <UI.Overlay styles={overlayStyle}>
           <form onSubmit={this.handleLoginAttempt}>
-            <Stack className={contentClass} tokens={{ childrenGap: 15 }}>
-              <TextField
+            <UI.Stack className={contentClass} tokens={{ childrenGap: 15 }}>
+              <UI.TextField
                 label={t("auth.username")}
                 onChange={(_event: React.FormEvent, newValue?: string) =>
                   this.setLogin(newValue)
                 }
                 value={this.state.username}
               />
-              <TextField
+              <UI.TextField
                 label={t("auth.password")}
                 type="password"
                 onChange={(_event: React.FormEvent, newValue?: string) =>
@@ -143,7 +104,7 @@ class Auth extends React.Component<AuthProps & WithTranslation, AuthState> {
                 }
                 value={this.state.password}
               />
-              <Checkbox
+              <UI.Checkbox
                 label={t("auth.rememberCredentials")}
                 checked={this.state.doRemember}
                 onChange={(_event?: React.FormEvent, checked?: boolean) =>
@@ -152,24 +113,44 @@ class Auth extends React.Component<AuthProps & WithTranslation, AuthState> {
                 defaultChecked={this.state.doRemember}
               />
               {this.state.doRemember ? (
-                <MessageBar messageBarType={MessageBarType.severeWarning}>
-                  <Trans
+                <UI.MessageBar messageBarType={UI.MessageBarType.severeWarning}>
+                  <Intl.Trans
                     ns="common"
                     i18nKey="auth.rememberCredentialsWarning"
                   />
-                </MessageBar>
+                </UI.MessageBar>
               ) : null}
-              <PrimaryButton
+              <UI.PrimaryButton
                 text={t("auth.login")}
                 onClick={this.handleLoginAttempt}
                 role="submit"
               />
-            </Stack>
+            </UI.Stack>
           </form>
-        </Overlay>
-      </Layer>
+        </UI.Overlay>
+      </UI.Layer>
     );
   }
 }
 
-export default withTranslation("translation")(Auth);
+export default Intl.withTranslation("translation")(Auth);
+
+const theme = UI.getTheme();
+const overlayStyle: UI.IOverlayStyles = {
+  root: {
+    backgroundColor: theme.palette.blackTranslucent40,
+    zIndex: 9999,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+};
+
+const contentClass = UI.mergeStyles([
+  {
+    backgroundColor: theme.palette.white,
+    color: theme.palette.blackTranslucent40,
+    width: "50vw",
+    padding: "50px",
+  },
+]);

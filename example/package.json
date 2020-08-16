@@ -1,7 +1,7 @@
 {
-  "name": "react-git-provider-example",
+  "name": "react-git-taskbar",
   "homepage": ".",
-  "version": "0.0.0-i",
+  "version": "0.0.1",
   "private": true,
   "scripts": {
     "start": "node ../node_modules/react-scripts/bin/react-scripts.js start",
@@ -9,6 +9,7 @@
     "test": "node ../node_modules/react-scripts/bin/react-scripts.js test",
     "eject": "node ../node_modules/react-scripts/bin/react-scripts.js eject"
   },
+  "repository": "publica-re/react-git-taskbar",
   "dependencies": {
     "@fluentui/react": "^7.123.8",
     "@gitgraph/js": "^1.3.5",

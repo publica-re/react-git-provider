@@ -1,9 +1,9 @@
 import * as React from "react";
+import * as Intl from "react-i18next";
 import bind from "bind-decorator";
 
-import { withTranslation, WithTranslation } from "react-i18next";
+import Git from "react-git-provider";
 
-import Git, { GitCommands, GitValues } from "react-git-provider";
 import "../../theme";
 
 import { Utils } from "..";
@@ -14,35 +14,44 @@ export interface ChangesState {
   files: { [path: string]: FileList };
 }
 
-class Changes extends React.Component<
-  ChangesProps & WithTranslation,
+class Changes extends Git.Component<
+  ChangesProps & Intl.WithTranslation,
   ChangesState
 > {
-  static contextType = Git.Context;
-
-  constructor(props: ChangesProps & WithTranslation) {
+  constructor(props: ChangesProps & Intl.WithTranslation) {
     super(props);
 
     this.state = {
+      ...this.state,
       files: {},
+      gitWatch: {
+        directory: {
+          read: { path: "/" },
+          status: {},
+        },
+      },
     };
   }
 
   @bind
   async onStage(path: string) {
-    const { fileStage, fileUnstage } = this.context.commands as GitCommands;
-    const { fileStatusTree } = this.context.values as GitValues;
-
-    if (fileStatusTree[path].status?.staged) {
-      fileUnstage({ path });
+    const { file } = this.context.io;
+    const fileStatus = await file.status({ path });
+    if (fileStatus.type === "success" && fileStatus.value.status?.staged) {
+      await file.unstage({ path });
     } else {
-      fileStage({ path });
+      await file.stage({ path });
     }
   }
 
   render() {
-    const { fileStatusTree, fileTree } = this.context.values as GitValues;
-    const changeTreeData = Utils.functions.changeTree(fileStatusTree, fileTree);
+    const { directory } = this.state.gitValues;
+    if (directory?.status === undefined || directory?.read === undefined)
+      return null;
+    const changeTreeData = Utils.functions.changeTree(
+      directory.status,
+      directory.read
+    );
     const nullActions = {
       onStageFile: this.onStage,
       onStageDirectory: () => null,
@@ -78,4 +87,4 @@ class Changes extends React.Component<
   }
 }
 
-export default withTranslation("translation")(Changes);
+export default Intl.withTranslation("translation")(Changes);

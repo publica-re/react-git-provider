@@ -17,7 +17,7 @@ import * as API from "../API";
 
 import Git, { GitInternal } from "react-git-provider";
 
-import { View, Quick, Dialog } from ".";
+import { View, Quick, Vendor, Dialog } from ".";
 
 export interface ActionMenuProps {
   onEdit: (path: string) => void;
@@ -163,7 +163,7 @@ class ActionMenu extends React.Component<
       this.setState({
         alert: {
           ...this.state.alert,
-          result: this.state.alert.canChoose ? false : true,
+          result: false,
         },
       });
     }
@@ -318,12 +318,14 @@ class ActionMenu extends React.Component<
           <Text>
             <Trans ns="translation" i18nKey="title.merge" />
           </Text>
-          <Quick.Merge />
+          <Quick.Merge alert={this.doAlert} />
           <Separator vertical />
           <Text>
             <Trans ns="translation" i18nKey="title.commit" />
           </Text>
           <Quick.Commit />
+          <Separator vertical />
+          <Vendor.Button />
         </Stack>
         <CustomPanel
           header={t("title.changes")}
@@ -362,10 +364,9 @@ class ActionMenu extends React.Component<
         <Dialog.Alert
           isVisible={this.state.alert !== undefined}
           title={this.state.alert?.title || ""}
+          canChoose={this.state.alert?.canChoose || false}
           onClose={this.handleAlertClose}
-          onConfirm={
-            this.state.alert?.canChoose ? this.handleAlertConfirm : undefined
-          }
+          onConfirm={this.handleAlertConfirm}
         />
         <Dialog.FilePicker
           isVisible={this.state.pick !== undefined}

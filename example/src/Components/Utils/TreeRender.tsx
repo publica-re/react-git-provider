@@ -1,15 +1,7 @@
 import * as React from "react";
+import * as Intl from "react-i18next";
+import * as UI from "@fluentui/react";
 import bind from "bind-decorator";
-
-import { withTranslation, WithTranslation } from "react-i18next";
-import {
-  Stack,
-  IconButton,
-  mergeStyles,
-  getTheme,
-  CommandBarButton,
-  ButtonType,
-} from "@fluentui/react";
 
 import { GitStatusOption } from "react-git-provider";
 import "../../theme";
@@ -49,10 +41,10 @@ export interface TreeRenderState {
 }
 
 class TreeRender extends React.Component<
-  TreeRenderProps & WithTranslation,
+  TreeRenderProps & Intl.WithTranslation,
   TreeRenderState
 > {
-  constructor(props: TreeRenderProps & WithTranslation) {
+  constructor(props: TreeRenderProps & Intl.WithTranslation) {
     super(props);
 
     this.state = {
@@ -197,49 +189,49 @@ class TreeRender extends React.Component<
               },
               onClick: () => this.props.onEdit(id),
             },
+            {
+              key: "props",
+              text: t("action.properties"),
+              iconProps: { iconName: "SetAction" },
+              subMenuProps: {
+                items: [
+                  {
+                    key: "rename",
+                    text: t("action.file.rename"),
+                    iconProps: {
+                      iconName: "Rename",
+                    },
+                    onClick: () => this.props.onRenameFile(id),
+                  },
+                  {
+                    key: "move",
+                    text: t("action.file.move"),
+                    iconProps: {
+                      iconName: "FabricMovetoFolder",
+                    },
+                    onClick: () => this.props.onMoveFile(id),
+                  },
+                  {
+                    key: "download",
+                    text: t("action.file.download"),
+                    iconProps: {
+                      iconName: "Download",
+                    },
+                    onClick: () => this.props.onDownloadFile(id),
+                  },
+                  {
+                    key: "delete",
+                    text: t("action.file.delete"),
+                    iconProps: {
+                      iconName: "Delete",
+                    },
+                    onClick: () => this.props.onDeleteFile(id),
+                  },
+                ],
+              },
+            },
           ]
         : []),
-      {
-        key: "props",
-        text: t("action.properties"),
-        iconProps: { iconName: "SetAction" },
-        subMenuProps: {
-          items: [
-            {
-              key: "rename",
-              text: t("action.file.rename"),
-              iconProps: {
-                iconName: "Rename",
-              },
-              onClick: () => this.props.onRenameFile(id),
-            },
-            {
-              key: "move",
-              text: t("action.file.move"),
-              iconProps: {
-                iconName: "FabricMovetoFolder",
-              },
-              onClick: () => this.props.onMoveFile(id),
-            },
-            {
-              key: "download",
-              text: t("action.file.download"),
-              iconProps: {
-                iconName: "Download",
-              },
-              onClick: () => this.props.onDownloadFile(id),
-            },
-            {
-              key: "delete",
-              text: t("action.file.delete"),
-              iconProps: {
-                iconName: "Delete",
-              },
-              onClick: () => this.props.onDeleteFile(id),
-            },
-          ],
-        },
-      },
       ...(isModified
         ? [
             {
@@ -269,7 +261,7 @@ class TreeRender extends React.Component<
     if (isDir) {
       const { isOpen } = this.state;
       return (
-        <Stack className={contentClass}>
+        <UI.Stack className={contentClass}>
           <div
             onDrop={(event) => {
               event.preventDefault();
@@ -282,8 +274,8 @@ class TreeRender extends React.Component<
             }}
             className="dropZone"
           >
-            <Stack horizontal>
-              <CommandBarButton
+            <UI.Stack horizontal>
+              <UI.CommandBarButton
                 iconProps={{
                   iconName: isOpen ? "ChevronDown" : "ChevronUp",
                 }}
@@ -299,8 +291,8 @@ class TreeRender extends React.Component<
                 }
               >
                 {name}
-              </CommandBarButton>
-            </Stack>
+              </UI.CommandBarButton>
+            </UI.Stack>
             {isOpen &&
               (children as TreeViewData[]).map((child) => (
                 <TranslatedTreeRender
@@ -310,7 +302,7 @@ class TreeRender extends React.Component<
                 />
               ))}
           </div>
-        </Stack>
+        </UI.Stack>
       );
     } else {
       const { onEdit } = this.props;
@@ -322,9 +314,9 @@ class TreeRender extends React.Component<
       const isDeleted = details?.status?.option === GitStatusOption.Deleted;
       const isAdded = details?.status?.option === GitStatusOption.Added;
       return (
-        <Stack className={contentClassItem}>
-          <Stack horizontal>
-            <CommandBarButton
+        <UI.Stack className={contentClassItem}>
+          <UI.Stack horizontal>
+            <UI.CommandBarButton
               iconProps={{
                 iconName: "TextDocument",
               }}
@@ -342,9 +334,9 @@ class TreeRender extends React.Component<
               }}
             >
               {name}
-            </CommandBarButton>
+            </UI.CommandBarButton>
             {stageIcon && (
-              <IconButton
+              <UI.IconButton
                 onClick={() => this.props.onStageFile(id)}
                 iconProps={{ iconName: stageIcon.iconName }}
                 title={stageIcon.title}
@@ -352,38 +344,38 @@ class TreeRender extends React.Component<
               />
             )}
             {statusIcon && (
-              <IconButton
-                buttonType={ButtonType.primary}
+              <UI.IconButton
+                buttonType={UI.ButtonType.primary}
                 theme={theme}
                 iconProps={{ iconName: statusIcon.iconName }}
                 title={statusIcon.title}
                 color={theme.palette.white}
               />
             )}
-          </Stack>
-        </Stack>
+          </UI.Stack>
+        </UI.Stack>
       );
     }
   }
 }
 
-const TranslatedTreeRender = withTranslation("translation")(TreeRender);
+const TranslatedTreeRender = Intl.withTranslation("translation")(TreeRender);
 
 export default TranslatedTreeRender;
 
-const theme = getTheme();
-const contentClass = mergeStyles([
+const theme = UI.getTheme();
+const contentClass = UI.mergeStyles([
   {
     padding: "1em 0 0 1em",
   },
 ]);
-const contentClassItem = mergeStyles([
+const contentClassItem = UI.mergeStyles([
   {
     padding: "0em",
   },
 ]);
 
-const titleClass = mergeStyles([
+const titleClass = UI.mergeStyles([
   {
     textAlign: "left",
     width: "100%",

@@ -1,6 +1,5 @@
 import { GitInternal } from "../Types";
 import { branchCreate } from "./BranchCreate";
-import { branchSwitch } from "./BranchSwitch";
 import { branchCheckout } from "./BranchCheckout";
 import { branchRemove } from "./BranchRemove";
 
@@ -23,9 +22,8 @@ export function branchRename(
       depth: -1,
     });
     await branchCreate(internal)({ ref: newRef });
-    await branchSwitch(internal)({ ref: newRef });
     await branchCheckout(internal)({
-      oid: oldRefOid,
+      ref: oldRefOid,
       updateHead: true,
       checkout: true,
     });

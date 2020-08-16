@@ -15,7 +15,7 @@ export interface TaskBarProps {
   repositoryUri: string;
   onEdit: (path: string) => void;
   author?: { name: string; email: string };
-  corsProxy?: string;
+  corsProxy?: string | false;
   behaviour?: "gitlab";
 }
 
@@ -61,7 +61,7 @@ class TaskBar extends React.Component<TaskBarProps, TaskBarState> {
     return (
       <Suspense fallback={<Utils.Loader message="Initial load" />}>
         <Git.Provider
-          uri={this.props.repositoryUri}
+          url={this.props.repositoryUri}
           corsProxy={this.props.corsProxy}
           author={this.state.author || TaskBar.defaultAuthor}
           basepath={this.state.repositoryPath}

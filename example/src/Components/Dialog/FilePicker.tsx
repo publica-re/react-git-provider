@@ -1,32 +1,12 @@
 import * as React from "react";
+import * as Intl from "react-i18next";
+import * as UI from "@fluentui/react";
 import bind from "bind-decorator";
 import pathUtils from "path";
 
-import { WithTranslation, withTranslation, Trans } from "react-i18next";
-import {
-  IconButton,
-  getTheme,
-  ComboBox,
-  DetailsList,
-  Stack,
-  DefaultButton,
-  PrimaryButton,
-  SelectionMode,
-  Icon,
-  DetailsRow,
-  IDetailsRowProps,
-  Dialog,
-  DialogFooter,
-  DialogContent,
-} from "@fluentui/react";
 import "../../theme";
 
-import Git, {
-  GitValues,
-  GitBakers,
-  FileStatus,
-  GitStatus,
-} from "react-git-provider";
+import Git from "react-git-provider";
 import { Utils } from "..";
 
 export interface FilePickerProps {
@@ -42,133 +22,160 @@ export interface FilePickerState {
   selectedFile?: string;
 }
 
-class FilePicker extends React.Component<
-  FilePickerProps & WithTranslation,
+export const filePickerColumns = [
+  {
+    key: "filetype",
+    fieldName: "filetype",
+    name: "File type",
+    minWidth: 50,
+  },
+  { key: "path", fieldName: "path", name: "Path", minWidth: 300 },
+  {
+    key: "status",
+    fieldName: "status",
+    name: "Status",
+    minWidth: 50,
+  },
+];
+class FilePicker extends Git.Component<
+  FilePickerProps & Intl.WithTranslation,
   FilePickerState
 > {
-  static contextType = Git.Context;
-
   public static defaultProps = {
     pickType: "file" as "file",
   };
 
-  constructor(props: FilePickerProps & WithTranslation) {
+  constructor(props: FilePickerProps & Intl.WithTranslation) {
     super(props);
 
     this.state = {
+      ...this.state,
       currentPath: "/",
       selectedFile: undefined,
+      gitWatch: {
+        directory: {
+          read: { path: "/" },
+          status: {},
+        },
+      },
     };
   }
 
-  async componentDidMount() {
-    const { directoryStatus, directoryRead } = this.context.bakers as GitBakers;
-    await directoryStatus({});
-    await directoryRead({ path: "/" });
+  @bind
+  prepareObjects(): FilePickerColumns[] {
+    const { currentPath } = this.state;
+    const { t } = this.props;
+    const { directory } = this.state.gitValues;
+    if (directory?.read === undefined || directory?.status === undefined)
+      return [];
+    const directories = Utils.functions.getAllDirs(directory.read);
+    const files = directory.status;
+    const paths = [...directories, ...Object.keys(files)];
+    return paths.reduce((objects: FilePickerColumns[], path: string) => {
+      if (pathUtils.dirname(path) !== currentPath || path === currentPath)
+        return objects;
+      const fileStatus = files[path];
+      const icon = fileStatus ? "TextDocument" : "FabricFolder";
+      const { title: status } = fileStatus?.status
+        ? Utils.functions.gitStatusToIcon(fileStatus.status)
+        : {
+            title: t("type.directory"),
+          };
+      return [
+        ...objects,
+        {
+          filetype: <UI.Icon iconName={icon} />,
+          path: path,
+          status: status,
+        },
+      ];
+    }, []);
   }
 
   @bind
-  renderRow(props?: IDetailsRowProps) {
+  selectFile(path?: string) {
+    this.setState({ selectedFile: path });
+  }
+
+  @bind
+  changeDirectory(path: string) {
+    this.setState({ currentPath: path });
+  }
+
+  @bind
+  doChoose() {
+    const { directory } = this.state.gitValues;
+    if (directory?.read === undefined || directory?.status === undefined)
+      return [];
+    const { pickType, onChoose: choose } = this.props;
+    const { selectedFile } = this.state;
+    if (pickType === "file" && selectedFile) {
+      // if it is a file
+      if (directory.status[selectedFile] !== undefined) {
+        return choose(selectedFile);
+      }
+      // if it is a directory
+      this.changeDirectory(selectedFile);
+      this.selectFile();
+    } else if (pickType === "dir") {
+      // if no file is selected
+      if (selectedFile === undefined) {
+        return choose(this.state.currentPath);
+      }
+      this.changeDirectory(selectedFile);
+      this.selectFile();
+    }
+  }
+
+  @bind
+  renderRow(props?: UI.IDetailsRowProps) {
     if (props) {
       return (
         <div onDoubleClick={this.doChoose}>
-          <DetailsRow {...props} indentWidth={0} />
+          <UI.DetailsRow {...props} indentWidth={0} />
         </div>
       );
     }
     return null;
   }
 
-  @bind
-  makeItems(items: { [path: string]: FileStatus }, directories: string[]) {
-    const { t } = this.props;
-    const paths = [...directories, ...Object.keys(items)];
-    return paths
-      .filter(
-        (path) =>
-          pathUtils.dirname(path) === this.state.currentPath &&
-          path !== this.state.currentPath
-      )
-      .map((path) => ({
-        filetype:
-          items[path] !== undefined ? (
-            <Icon iconName="TextDocument" />
-          ) : (
-            <Icon iconName="FabricFolder" />
-          ),
-        path: path,
-        status:
-          (items[path]?.status !== undefined &&
-            Utils.functions.gitStatusToIcon(items[path]?.status as GitStatus)
-              ?.title) ||
-          t("type.directory"),
-      }));
-  }
-
-  @bind
-  doChoose() {
-    const { fileStatusTree } = this.context.values as GitValues;
-    if (this.props.pickType === "file") {
-      if (this.state.selectedFile) {
-        if (fileStatusTree[this.state.selectedFile] !== undefined) {
-          this.props.onChoose(this.state.selectedFile);
-        } else {
-          this.setState({
-            currentPath: this.state.selectedFile,
-            selectedFile: "",
-          });
-        }
-      }
-    } else if (this.props.pickType === "dir") {
-      if (
-        !this.state.selectedFile ||
-        fileStatusTree[this.state.selectedFile] !== undefined
-      ) {
-        this.props.onChoose(this.state.currentPath);
-      } else {
-        this.setState({
-          currentPath: this.state.selectedFile,
-          selectedFile: "",
-        });
-      }
-    }
-  }
-
   render() {
-    const { fileStatusTree, fileTree } = this.context.values as GitValues;
-    const { t } = this.props;
-
+    const { t, isVisible, pickType, onAbort } = this.props;
+    const { currentPath } = this.state;
+    const { directory } = this.state.gitValues;
+    if (directory?.read === undefined || directory?.status === undefined)
+      return [];
+    const directories = Utils.functions.getAllDirs(directory.read);
+    const renderedDirectories = directories.map((path) => ({
+      key: path,
+      text: path,
+    }));
+    const title =
+      pickType === "dir" ? t("title.dialog-pick") : t("title.file-pick");
     return (
-      <Dialog
-        hidden={!this.props.isVisible}
+      <UI.Dialog
+        hidden={!isVisible}
         modalProps={{
           isBlocking: false,
         }}
         dialogContentProps={{
-          title:
-            this.props.pickType === "dir"
-              ? t("title.dialog-pick")
-              : t("title.file-pick"),
+          title: title,
         }}
-        onDismiss={this.props.onAbort}
+        onDismiss={onAbort}
         minWidth={720}
       >
-        <DialogContent>
-          <Stack horizontal>
-            <ComboBox
-              selectedKey={this.state.currentPath}
+        <UI.DialogContent>
+          <UI.Stack horizontal>
+            <UI.ComboBox
+              selectedKey={currentPath}
               autoComplete={"on"}
               allowFreeform={false}
-              onChange={(_event, option) =>
-                option?.key &&
-                this.setState({ currentPath: option?.key.toString() })
-              }
-              options={Utils.functions.getAllDirs(fileTree).map((path) => ({
-                key: path,
-                text: path,
-              }))}
+              onChange={(_event, option) => {
+                option?.key && this.changeDirectory(option.key.toString());
+              }}
+              options={renderedDirectories}
             />
-            <IconButton
+            <UI.IconButton
               styles={iconButtonStyles}
               iconProps={{ iconName: "DoubleChevronUp" }}
               ariaLabel={t("action.top")}
@@ -178,56 +185,43 @@ class FilePicker extends React.Component<
                 })
               }
             />
-          </Stack>
-          <DetailsList
-            items={this.makeItems(
-              fileStatusTree,
-              Utils.functions.getAllDirs(fileTree)
-            )}
-            selectionMode={SelectionMode.single}
+          </UI.Stack>
+          <UI.DetailsList
+            items={this.prepareObjects()}
+            selectionMode={UI.SelectionMode.single}
             onRenderRow={this.renderRow}
-            onActiveItemChanged={(item) => {
-              this.setState({ selectedFile: item.path });
-            }}
-            columns={[
-              {
-                key: "filetype",
-                fieldName: "filetype",
-                name: "File type",
-                minWidth: 50,
-              },
-              { key: "path", fieldName: "path", name: "Path", minWidth: 300 },
-              {
-                key: "status",
-                fieldName: "status",
-                name: "Status",
-                minWidth: 50,
-              },
-            ]}
+            onActiveItemChanged={(item) => this.selectFile(item.path)}
+            columns={filePickerColumns}
           />
-        </DialogContent>
-        <DialogFooter>
-          <DefaultButton onClick={this.props.onAbort}>
-            <Trans ns="translation" i18nKey="dialog.cancel" />
-          </DefaultButton>
-          <PrimaryButton
+        </UI.DialogContent>
+        <UI.DialogFooter>
+          <UI.DefaultButton onClick={this.props.onAbort}>
+            <Intl.Trans ns="translation" i18nKey="dialog.cancel" />
+          </UI.DefaultButton>
+          <UI.PrimaryButton
             disabled={
               this.state.selectedFile === undefined &&
               this.props.pickType === "file"
             }
             onClick={this.doChoose}
           >
-            <Trans ns="translation" i18nKey="dialog.choose" />
-          </PrimaryButton>
-        </DialogFooter>
-      </Dialog>
+            <Intl.Trans ns="translation" i18nKey="dialog.choose" />
+          </UI.PrimaryButton>
+        </UI.DialogFooter>
+      </UI.Dialog>
     );
   }
 }
 
-export default withTranslation("translation")(FilePicker);
+export default Intl.withTranslation("translation")(FilePicker);
 
-const theme = getTheme();
+interface FilePickerColumns {
+  filetype: React.ReactNode;
+  path: string;
+  status: string;
+}
+
+const theme = UI.getTheme();
 const iconButtonStyles = {
   root: {
     color: theme.palette.neutralPrimary,

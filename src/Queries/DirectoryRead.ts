@@ -33,36 +33,31 @@ export function directoryRead(
     path,
     ignore,
   }: DirectoryReadOptions): Promise<DirectoryList | FileList> {
-    try {
-      const physicalPath = pathUtils.join(internal.basepath, path);
-      const stat = await internal.fs.promises.stat(physicalPath);
-      if (stat.isDirectory()) {
-        const objects: string[] = await internal.fs.promises.readdir(
-          physicalPath
-        );
-        const childrenObjects = objects.reduce(
-          (prev: Promise<DirectoryList | FileList>[], obj: string) => {
-            if (!(ignore || [".git"]).includes(obj)) {
-              const objectPhysicalPath = pathUtils.join(path, obj);
-              return [
-                ...prev,
-                directoryReadHelper({
-                  path: objectPhysicalPath,
-                  ignore: ignore,
-                }),
-              ];
-            }
-            return prev;
-          },
-          []
-        );
-        return makeDir(path, await Promise.all(childrenObjects));
-      } else {
-        return makeFile(path);
-      }
-    } catch (e) {
-      internal.events.error(e);
-      return makeFile("/");
+    const physicalPath = pathUtils.join(internal.basepath, path);
+    const stat = await internal.fs.promises.stat(physicalPath);
+    if (stat.isDirectory()) {
+      const objects: string[] = await internal.fs.promises.readdir(
+        physicalPath
+      );
+      const childrenObjects = objects.reduce(
+        (prev: Promise<DirectoryList | FileList>[], obj: string) => {
+          if (!(ignore || [".git"]).includes(obj)) {
+            const objectPhysicalPath = pathUtils.join(path, obj);
+            return [
+              ...prev,
+              directoryReadHelper({
+                path: objectPhysicalPath,
+                ignore: ignore,
+              }),
+            ];
+          }
+          return prev;
+        },
+        []
+      );
+      return makeDir(path, await Promise.all(childrenObjects));
+    } else {
+      return makeFile(path);
     }
   };
 }

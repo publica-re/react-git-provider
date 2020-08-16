@@ -10,7 +10,7 @@ export function repositoryInit(
   return async function repositoryInitHelper({
     defaultBranch,
   }: RepositoryInitParams): Promise<void> {
-    return await internal.git.init({
+    await internal.git.init({
       fs: internal.fs,
       dir: internal.basepath,
       defaultBranch: defaultBranch,

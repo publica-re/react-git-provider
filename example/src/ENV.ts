@@ -1,0 +1,4 @@
+export default {
+  GITLAB_OAUTH_KEY:
+    "6e5b150c2977a071e9ea60d76563f7f53bfcaa40b587000b9101a771bd02b522",
+};

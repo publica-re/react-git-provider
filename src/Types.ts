@@ -2,9 +2,6 @@
 import {
   DirectoryList,
   FileList,
-  FileStatus,
-  Tag,
-  Remote,
   BranchCurrentOptions,
   BranchListOptions,
   CommitHistoryOptions,
@@ -16,9 +13,14 @@ import {
   PathExistsOptions,
   RemoteListOptions,
   TagListOptions,
-  Branch,
   BranchList,
-  CompareStatus,
+  DirectoryStatus,
+  DirectoryCompare,
+  MergeConflictSolution,
+  AuthorType,
+  Remote,
+  FileStatusOptions,
+  FileStatus,
 } from "./Queries";
 import git, {
   PromiseFsClient,
@@ -26,11 +28,12 @@ import git, {
   GitAuth,
   ReadCommitResult,
   PushResult,
+  MergeResult,
+  FetchResult,
 } from "isomorphic-git";
 import {
   BranchCreateParams,
   BranchRemoveParams,
-  BranchSwitchParams,
   BranchCheckoutParams,
   DirectoryMakeParams,
   DirectoryRemoveParams,
@@ -44,60 +47,46 @@ import {
   RepositoryCloneParams,
   RepositoryCommitParams,
   RepositoryInitParams,
-  RepositoryPullParams,
+  RepositoryFetchParams,
   RepositoryPushParams,
   RepositoryStageAndCommitParams,
   TagCreateParams,
   TagRemoveParams,
   BranchRenameParams,
   FileMoveParams,
+  BranchRebaseParams,
+  BranchMergeParams,
+  BranchSolveConflictsParams,
 } from "./Commands";
+import Emitter from "eventemitter3";
+import EventEmitter from "eventemitter3";
 
 const notImplemented = (): any => {
   throw Error("not implemented");
 };
 
 export type Path = string;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type GitCommand<T extends Record<string, any>, U> = (
-  params: T
-) => Promise<U>;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type GitUnboundCommand<T extends Record<string, any>, U> = (
-  internal: GitInternal
-) => GitCommand<T, U>;
-
-export type GitBaker<
-  _T extends (keyof GitValues)[],
-  U extends Record<string, any> = {}
-> = (options: U, bake?: boolean) => Promise<any>;
-export type GitRequiring<_T extends (keyof GitBakers)[], T> = T;
-export type GitUpdating<
-  _T extends (keyof GitBakers)[],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  T extends Record<string, any>,
-  U
-> = GitCommand<T, U>;
+export const defaultAuthor = {
+  name: "react-git-provider",
+  email: "dev@publica.re",
+};
 
 export interface GitInternal {
   fs: PromiseFsClient;
   git: typeof git;
   http: HttpClient;
-  corsProxy: string;
+  corsProxy?: string;
   basepath: Path;
-  events: {
+  loggers: {
     message: (message: string) => void;
     error: (error: string) => void;
   };
-  author: {
-    name: string;
-    email: string;
-  };
-  setAuthor: (author: { name: string; email: string }) => void;
   url: string;
+  author: AuthorType;
+  setAuthor: (author: AuthorType) => void;
   getAuth: (url: string, auth: GitAuth) => Promise<GitAuth>;
+  handleAuthSuccess: (url: string, auth: GitAuth) => void;
+  handleAuthFailure: (url: string, auth: GitAuth) => void;
 }
 
 export const defaultGitInternal: () => GitInternal = () => ({
@@ -118,275 +107,386 @@ export const defaultGitInternal: () => GitInternal = () => ({
   },
   git: git,
   http: { request: notImplemented },
-  corsProxy: "https://cors.isomorphic-git.org/",
+  corsProxy: undefined,
   basepath: "/",
-  events: {
+  loggers: {
     message: console.log,
     error: console.error,
   },
-  author: {
-    name: "react-git-provider",
-    email: "dev@publica.re",
-  },
   url: "/",
-  setAuthor: notImplemented,
   async getAuth(): Promise<GitAuth> {
     return {
       username: prompt("User name") || undefined,
       password: prompt("Password") || undefined,
     };
   },
+  setAuthor: notImplemented,
+  handleAuthFailure: notImplemented,
+  handleAuthSuccess: notImplemented,
+  author: defaultAuthor,
 });
 
-export interface GitCommands {
-  branchCreate: GitUpdating<["branchList"], BranchCreateParams, void>;
-  branchRemove: GitUpdating<
-    [
-      "branchList",
-      "branchCurrent",
-      "directoryRead",
-      "directoryStatus",
-      "fileRead",
-      "pathExists",
-      "commitHistory"
-    ],
-    BranchRemoveParams,
-    void
-  >;
-  branchSwitch: GitUpdating<
-    [
-      "branchList",
-      "branchCurrent",
-      "directoryRead",
-      "directoryStatus",
-      "fileRead",
-      "pathExists",
-      "commitHistory"
-    ],
-    BranchSwitchParams,
-    void
-  >;
-  branchRename: GitUpdating<
-    [
-      "branchList",
-      "branchCurrent",
-      "directoryRead",
-      "directoryStatus",
-      "fileRead",
-      "pathExists",
-      "commitHistory"
-    ],
-    BranchRenameParams,
-    void
-  >;
-  branchCheckout: GitUpdating<
-    ["directoryRead", "directoryStatus", "fileRead"],
-    BranchCheckoutParams,
-    void
-  >;
-  directoryMake: GitUpdating<
-    ["directoryRead", "directoryStatus", "pathExists"],
-    DirectoryMakeParams,
-    boolean
-  >;
-  directoryRemove: GitUpdating<
-    ["directoryRead", "directoryStatus", "fileRead", "pathExists"],
-    DirectoryRemoveParams,
-    boolean
-  >;
-  fileDiscardChanges: GitUpdating<
-    ["directoryRead", "directoryStatus", "fileRead"],
-    FileDiscardChangesParams,
-    void
-  >;
-  fileRemove: GitUpdating<
-    ["directoryRead", "directoryStatus", "fileRead", "pathExists"],
-    FileRemoveParams,
-    boolean
-  >;
-  fileStage: GitUpdating<["directoryStatus"], FileStageParams, void>;
-  fileUnstage: GitUpdating<["directoryStatus"], FileUnstageParams, void>;
-  fileWrite: GitUpdating<
-    ["fileRead", "pathExists", "directoryStatus", "directoryRead"],
-    FileWriteParams,
-    boolean
-  >;
-  fileMove: GitUpdating<
-    ["fileRead", "pathExists", "directoryStatus", "directoryRead"],
-    FileMoveParams,
-    void
-  >;
-  remoteAdd: GitUpdating<["remoteList", "branchList"], RemoteAddParams, void>;
-  remoteDelete: GitUpdating<
-    ["remoteList", "branchList"],
-    RemoteDeleteParams,
-    void
-  >;
-  repositoryClone: GitUpdating<
-    [
-      "branchList",
-      "directoryRead",
-      "directoryStatus",
-      "fileRead",
-      "pathExists",
-      "commitHistory"
-    ],
-    RepositoryCloneParams,
-    void
-  >;
-  repositoryCommit: GitUpdating<
-    ["directoryStatus", "commitHistory"],
-    RepositoryCommitParams,
-    string
-  >;
-  repositoryInit: GitUpdating<
-    [
-      "branchList",
-      "directoryRead",
-      "directoryStatus",
-      "fileRead",
-      "pathExists",
-      "commitHistory"
-    ],
-    RepositoryInitParams,
-    void
-  >;
-  repositoryPull: GitUpdating<
-    [
-      "branchList",
-      "directoryRead",
-      "directoryStatus",
-      "fileRead",
-      "pathExists",
-      "commitHistory"
-    ],
-    RepositoryPullParams,
-    void
-  >;
-  repositoryPush: GitUpdating<
-    [
-      "branchList",
-      "directoryRead",
-      "directoryStatus",
-      "fileRead",
-      "commitHistory"
-    ],
-    RepositoryPushParams,
-    PushResult
-  >;
-  repositoryStageAndCommit: GitUpdating<
-    ["directoryStatus", "commitHistory"],
-    RepositoryStageAndCommitParams,
-    string
-  >;
-  tagCreate: GitUpdating<["tagList"], TagCreateParams, void>;
-  tagRemove: GitUpdating<["tagList"], TagRemoveParams, void>;
+export type GitReturn<T = any> =
+  | {
+      type: "success";
+      value: T;
+    }
+  | { type: "error"; message: Error };
+
+export type GitWrite<
+  Params,
+  _Updates extends string[] | "ALL",
+  Returns = void
+> = (params: Params) => Promise<GitReturn<Returns>>;
+
+export type GitRead<Options, ValueType> = (
+  options: Options
+) => Promise<GitReturn<ValueType>>;
+
+export interface GitIO {
+  branch: {
+    create: GitWrite<BranchCreateParams, ["branch.list"]>;
+    remove: GitWrite<BranchRemoveParams, ["branch.list"]>;
+    rebase: GitWrite<
+      BranchRebaseParams,
+      [
+        "branch.commitHistory",
+        "directory.status",
+        "directory.read",
+        "file.exists",
+        "file.data",
+        "file.status"
+      ],
+      void
+    >;
+    merge: GitWrite<
+      BranchMergeParams,
+      [
+        "branch.commitHistory",
+        "directory.status",
+        "directory.read",
+        "file.exists",
+        "file.data",
+        "file.status"
+      ],
+      MergeResult | MergeConflictSolution[]
+    >;
+    checkout: GitWrite<
+      BranchCheckoutParams,
+      [
+        "branch.commitHistory",
+        "branch.current",
+        "directory.status",
+        "directory.read",
+        "file.exists",
+        "file.data",
+        "file.status"
+      ],
+      void
+    >;
+    rename: GitWrite<
+      BranchRenameParams,
+      ["branch.current", "branch.list"],
+      void
+    >;
+    solveConflicts: GitWrite<
+      BranchSolveConflictsParams,
+      [
+        "branch.commitHistory",
+        "directory.status",
+        "directory.read",
+        "file.exists",
+        "file.data",
+        "file.status"
+      ],
+      void
+    >;
+    current: GitRead<BranchCurrentOptions, string | void>;
+    list: GitRead<BranchListOptions, BranchList>;
+    commitHistory: GitRead<CommitHistoryOptions, ReadCommitResult[]>;
+  };
+  directory: {
+    make: GitWrite<
+      DirectoryMakeParams,
+      ["directory.read", "directory.status", "file.exists", "file.read"],
+      boolean
+    >;
+    remove: GitWrite<
+      DirectoryRemoveParams,
+      ["directory.read", "directory.status", "file.exists", "file.read"],
+      boolean
+    >;
+    read: GitRead<DirectoryReadOptions, DirectoryList | FileList>;
+    status: GitRead<DirectoryStatusOptions, DirectoryStatus>;
+    compare: GitRead<DirectoryCompareOptions, DirectoryCompare>;
+  };
+  file: {
+    discardChanges: GitWrite<
+      FileDiscardChangesParams,
+      [
+        "directory.read",
+        "directory.status",
+        "file.read",
+        "file.status",
+        "file.exists"
+      ]
+    >;
+    remove: GitWrite<
+      FileRemoveParams,
+      [
+        "directory.read",
+        "directory.status",
+        "file.read",
+        "file.status",
+        "file.exists"
+      ],
+      boolean
+    >;
+    stage: GitWrite<FileStageParams, ["directory.status", "file.status"]>;
+    unstage: GitWrite<FileUnstageParams, ["directory.status", "file.status"]>;
+    write: GitWrite<
+      FileWriteParams,
+      [
+        "file.read",
+        "file.status",
+        "file.exists",
+        "directory.read",
+        "directory.status"
+      ],
+      boolean
+    >;
+    move: GitWrite<
+      FileMoveParams,
+      [
+        "file.read",
+        "file.status",
+        "file.exists",
+        "directory.read",
+        "directory.status"
+      ]
+    >;
+    read: GitRead<FileReadOptions, string | Uint8Array | undefined>;
+    readAt: GitRead<FileReadAtOptions, string | Uint8Array | undefined>;
+    exists: GitRead<PathExistsOptions, boolean>;
+    status: GitRead<FileStatusOptions, FileStatus>;
+  };
+  remote: {
+    add: GitWrite<RemoteAddParams, ["remote.list", "branch.list"]>;
+    delete: GitWrite<RemoteDeleteParams, ["remote.list", "branch.list"]>;
+    list: GitRead<RemoteListOptions, Remote[]>;
+  };
+  repository: {
+    clone: GitWrite<
+      RepositoryCloneParams,
+      [
+        "branch.commitHistory",
+        "branch.list",
+        "branch.current",
+        "remote.list",
+        "directory.read",
+        "directory.status",
+        "file.read",
+        "file.status",
+        "file.exists"
+      ]
+    >;
+    init: GitWrite<
+      RepositoryInitParams,
+      [
+        "branch.commitHistory",
+        "branch.list",
+        "branch.current",
+        "remote.list",
+        "directory.read",
+        "directory.status",
+        "file.read",
+        "file.status",
+        "file.exists"
+      ]
+    >;
+    commit: GitWrite<
+      RepositoryCommitParams,
+      ["directory.status", "file.status", "branch.commitHistory"],
+      string
+    >;
+    fetch: GitWrite<RepositoryFetchParams, ["branch.list"], FetchResult>;
+    push: GitWrite<
+      RepositoryPushParams,
+      [
+        "directory.status",
+        "file.status",
+        "branch.list",
+        "branch.commitHistory"
+      ],
+      PushResult
+    >;
+    stageAndCommit: GitWrite<
+      RepositoryStageAndCommitParams,
+      ["file.status", "directory.status", "branch.commitHistory"],
+      string
+    >;
+  };
+  tag: {
+    create: GitWrite<TagCreateParams, ["tag.list"]>;
+    remove: GitWrite<TagRemoveParams, ["tag.list"]>;
+    list: GitRead<TagListOptions, string[]>;
+  };
 }
+export type AllGitReadOptions = {
+  branch: {
+    current: BranchCurrentOptions;
+    list: BranchListOptions;
+    commitHistory: CommitHistoryOptions;
+  };
+  directory: {
+    read: DirectoryReadOptions;
+    status: DirectoryStatusOptions;
+    compare: DirectoryCompareOptions;
+  };
+  file: {
+    read: FileReadOptions;
+    readAt: FileReadAtOptions;
+    exists: PathExistsOptions;
+    status: FileStatusOptions;
+  };
+  remote: {
+    list: RemoteListOptions;
+  };
+  tag: {
+    list: TagListOptions;
+  };
+};
 
-export const defaultGitCommands: () => GitCommands = () => ({
-  branchCreate: notImplemented,
-  branchRemove: notImplemented,
-  branchSwitch: notImplemented,
-  branchRename: notImplemented,
-  directoryMake: notImplemented,
-  directoryRemove: notImplemented,
-  branchCheckout: notImplemented,
-  fileDiscardChanges: notImplemented,
-  fileRemove: notImplemented,
-  fileMove: notImplemented,
-  fileStage: notImplemented,
-  fileUnstage: notImplemented,
-  fileWrite: notImplemented,
-  remoteDelete: notImplemented,
-  remoteAdd: notImplemented,
-  repositoryClone: notImplemented,
-  repositoryCommit: notImplemented,
-  repositoryInit: notImplemented,
-  repositoryPull: notImplemented,
-  repositoryPush: notImplemented,
-  repositoryStageAndCommit: notImplemented,
-  tagCreate: notImplemented,
-  tagRemove: notImplemented,
-});
+export type GitReadOptions = Partial<{
+  branch: Partial<{
+    current: BranchCurrentOptions;
+    list: BranchListOptions;
+    commitHistory: CommitHistoryOptions;
+  }>;
+  directory: Partial<{
+    read: DirectoryReadOptions;
+    status: DirectoryStatusOptions;
+    compare: DirectoryCompareOptions;
+  }>;
+  file: Partial<{
+    read: FileReadOptions;
+    readAt: FileReadAtOptions;
+    exists: PathExistsOptions;
+    status: FileStatusOptions;
+  }>;
+  remote: Partial<{
+    list: RemoteListOptions;
+  }>;
+  tag: Partial<{
+    list: TagListOptions;
+  }>;
+}>;
 
-export interface GitBakers {
-  branchCurrent: GitBaker<["branchCurrent"], BranchCurrentOptions>;
-  branchList: GitBaker<["branchList"], BranchListOptions>;
-  commitHistory: GitBaker<["commitHistory"], CommitHistoryOptions>;
-  directoryRead: GitBaker<["fileTree"], DirectoryReadOptions>;
-  directoryStatus: GitBaker<["fileStatusTree"], DirectoryStatusOptions>;
-  directoryCompare: GitBaker<["directoryCompare"], DirectoryCompareOptions>;
-  fileRead: GitBaker<["fileData"], FileReadOptions>;
-  fileReadAt: GitBaker<["fileDataAt"], FileReadAtOptions>;
-  pathExists: GitBaker<["pathExists"], PathExistsOptions>;
-  remoteList: GitBaker<["remoteList"], RemoteListOptions>;
-  tagList: GitBaker<["tagList"], TagListOptions>;
-}
+export type GitIONS = keyof GitIO;
+type GitNSval<T extends GitIONS> = GitIO[T];
+export type GitIOCall<T extends GitIONS> = keyof GitNSval<T>;
+export type GitIOFunction<
+  T extends GitIONS,
+  U extends GitIOCall<T>
+> = GitIO[T][U];
 
-export const defaultGitBakers: () => GitBakers = () => ({
-  branchCurrent: notImplemented,
-  branchList: notImplemented,
-  commitHistory: notImplemented,
-  directoryRead: notImplemented,
-  directoryStatus: notImplemented,
-  directoryCompare: notImplemented,
-  fileRead: notImplemented,
-  fileReadAt: notImplemented,
-  pathExists: notImplemented,
-  remoteList: notImplemented,
-  tagList: notImplemented,
-});
+export type GitReadOptionsNS = keyof AllGitReadOptions;
+type GitReadOptionsNSval<T extends GitReadOptionsNS> = AllGitReadOptions[T];
+export type GitReadOptionsCall<
+  T extends GitReadOptionsNS
+> = keyof GitReadOptionsNSval<T>;
+export type GitReadOptionsOptions<
+  T extends GitReadOptionsNS,
+  U extends GitReadOptionsCall<T>
+> = AllGitReadOptions[T][U];
 
-export interface GitValues {
-  branchCurrent: GitRequiring<["branchCurrent"], Branch>;
-  branchList: GitRequiring<["branchList"], BranchList>;
-  remoteList: GitRequiring<["remoteList"], Remote[]>;
-  tagList: GitRequiring<["tagList"], Tag[]>;
-  fileTree: GitRequiring<["directoryRead"], DirectoryList | FileList>;
-  fileStatusTree: GitRequiring<
-    ["directoryStatus"],
-    { [path: string]: FileStatus }
-  >;
-  directoryCompare: GitRequiring<
-    ["directoryCompare"],
-    { [path: string]: CompareStatus }
-  >;
-  fileData: GitRequiring<["fileRead"], string | undefined>;
-  fileDataAt: GitRequiring<["fileReadAt"], string | undefined>;
-  pathExists: GitRequiring<["pathExists"], boolean>;
-  commitHistory: GitRequiring<["commitHistory"], ReadCommitResult[]>;
-}
+export type GitReadValues = Partial<{
+  branch: Partial<{
+    current: string | void;
+    list: BranchList;
+    commitHistory: ReadCommitResult[];
+  }>;
+  directory: Partial<{
+    read: DirectoryList | FileList;
+    status: DirectoryStatus;
+    compare: DirectoryCompare;
+  }>;
+  file: Partial<{
+    read: string | Uint8Array | undefined;
+    readAt: string | Uint8Array | undefined;
+    exists: boolean;
+    status: FileStatus;
+  }>;
+  remote: Partial<{
+    list: Remote[];
+  }>;
+  tag: Partial<{
+    list: string[];
+  }>;
+}>;
 
-export const defaultGitValues: () => GitValues = () => ({
-  branchCurrent: "master",
-  branchList: { local: ["master"] },
-  remoteList: [],
-  fileTree: {
-    type: "directory",
-    path: "/",
-    children: [],
+export const defaultGitIO: () => GitIO = () => ({
+  branch: {
+    create: notImplemented,
+    remove: notImplemented,
+    rebase: notImplemented,
+    merge: notImplemented,
+    checkout: notImplemented,
+    commitHistory: notImplemented,
+    rename: notImplemented,
+    solveConflicts: notImplemented,
+    current: notImplemented,
+    list: notImplemented,
   },
-  fileStatusTree: {},
-  directoryCompare: {},
-  fileData: "",
-  fileDataAt: "",
-  pathExists: true,
-  commitHistory: [],
-  tagList: [],
+  directory: {
+    make: notImplemented,
+    remove: notImplemented,
+    read: notImplemented,
+    status: notImplemented,
+    compare: notImplemented,
+  },
+  file: {
+    discardChanges: notImplemented,
+    remove: notImplemented,
+    stage: notImplemented,
+    unstage: notImplemented,
+    write: notImplemented,
+    move: notImplemented,
+    read: notImplemented,
+    readAt: notImplemented,
+    exists: notImplemented,
+    status: notImplemented,
+  },
+  remote: {
+    add: notImplemented,
+    delete: notImplemented,
+    list: notImplemented,
+  },
+  repository: {
+    clone: notImplemented,
+    init: notImplemented,
+    commit: notImplemented,
+    fetch: notImplemented,
+    push: notImplemented,
+    stageAndCommit: notImplemented,
+  },
+  tag: {
+    create: notImplemented,
+    remove: notImplemented,
+    list: notImplemented,
+  },
 });
 
 export interface GitContext {
   internal: GitInternal;
-  commands: GitCommands;
-  bakers: GitBakers;
-  values: GitValues;
+  io: GitIO;
+  emitter: Emitter;
 }
 
 export const defaultGitContext: () => GitContext = () => ({
   internal: defaultGitInternal(),
-  commands: defaultGitCommands(),
-  bakers: defaultGitBakers(),
-  values: defaultGitValues(),
+  io: defaultGitIO(),
+  emitter: new EventEmitter(),
 });
 
 export type AuthComponentProps = {
@@ -408,3 +508,19 @@ export type AuthOptions =
       type: "element";
       value: React.ComponentType<AuthComponentProps>;
     };
+
+export const defaultAuth: AuthOptions = {
+  type: "getter",
+  async getValue(): Promise<GitAuth> {
+    return {
+      username: prompt("User name") || "",
+      password: prompt("Password") || "",
+    };
+  },
+};
+
+export type GitComponentState = {
+  gitWatch: GitReadOptions;
+  gitValues: GitReadValues;
+  gitEmitters: { name: string; emitter: any }[];
+};

@@ -1,18 +1,12 @@
 import * as React from "react";
+import * as Intl from "react-i18next";
+import * as UI from "@fluentui/react";
 import bind from "bind-decorator";
 
-import { withTranslation, WithTranslation } from "react-i18next";
-
-import Git, { GitBakers, GitValues, GitCommands } from "react-git-provider";
+import Git from "react-git-provider";
 
 import { Widget } from "..";
-import {
-  Stack,
-  IconButton,
-  getTheme,
-  mergeStyles,
-  ContextualMenu,
-} from "@fluentui/react";
+
 import "../../theme";
 
 export interface BranchProps {
@@ -24,37 +18,38 @@ export interface BranchState {
   actionMenuOpen: boolean;
 }
 
-class Branch extends React.Component<
-  BranchProps & WithTranslation,
+class Branch extends Git.Component<
+  BranchProps & Intl.WithTranslation,
   BranchState
 > {
   static contextType = Git.Context;
 
   private actionButtonRef = React.createRef<HTMLSpanElement>();
 
-  constructor(props: BranchProps & WithTranslation) {
+  constructor(props: BranchProps & Intl.WithTranslation) {
     super(props);
 
     this.state = {
+      ...this.state,
       actionMenuOpen: false,
+      gitWatch: {
+        branch: {
+          list: {},
+          current: {},
+        },
+      },
     };
   }
 
   @bind
-  async componentDidMount() {
-    const { branchList, branchCurrent } = this.context.bakers as GitBakers;
-    await branchList({});
-    await branchCurrent({});
-  }
-
-  @bind
   async actionSwitchBranch(key: string) {
-    const { branchList } = this.context.values as GitValues;
-    const { branchCreate, branchSwitch } = this.context.commands as GitCommands;
-    if (!branchList["local"].includes(key)) {
-      await branchCreate({ ref: key });
+    const { branch } = this.state.gitValues;
+    if (branch?.list === undefined) return;
+    const { branch: branchIo } = this.context.io;
+    if (!branch.list["local"].includes(key)) {
+      await branchIo.create({ ref: key });
     }
-    await branchSwitch({ ref: key });
+    await branchIo.checkout({ ref: key });
   }
 
   @bind
@@ -70,16 +65,17 @@ class Branch extends React.Component<
   @bind
   async onDelete() {
     const { t } = this.props;
-    const { branchList, branchCurrent } = this.context.values as GitValues;
-    const { branchSwitch, branchRemove } = this.context.commands as GitCommands;
-    if (branchList["local"].length > 1) {
-      const branchToRemove = branchCurrent;
-      const switchTo = branchList["local"].find(
+    const { branch } = this.state.gitValues;
+    if (branch?.list === undefined || branch?.current === undefined) return;
+    const { branch: branchIo } = this.context.io;
+    if (branch.list["local"].length > 1) {
+      const branchToRemove = branch.current;
+      const switchTo = branch.list["local"].find(
         (name) => name !== branchToRemove
       );
       if (switchTo !== undefined) {
-        await branchSwitch({ ref: switchTo });
-        await branchRemove({ ref: branchToRemove });
+        await branchIo.checkout({ ref: switchTo });
+        await branchIo.remove({ ref: branchToRemove });
       }
     } else {
       this.props.alert(t("error.branch.delete-not-enough"));
@@ -89,41 +85,42 @@ class Branch extends React.Component<
   @bind
   async onRename() {
     const { t } = this.props;
-    const { branchList, branchCurrent } = this.context.values as GitValues;
-    const { branchRename, branchSwitch } = this.context.commands as GitCommands;
+    const { branch } = this.state.gitValues;
+    if (branch?.list === undefined || branch?.current === undefined) return;
+    const { branch: branchIo } = this.context.io;
     const newRef = await this.props.prompt(
       t("action.branch.new-title"),
-      branchCurrent
+      branch.current
     );
-    if (newRef !== false && branchList["local"].includes(newRef)) {
+    if (newRef !== false && branch.list["local"].includes(newRef)) {
       this.props.alert(t("error.branch.unique"));
     } else if (newRef !== false) {
-      await branchRename({
-        oldRef: branchCurrent,
+      await branchIo.rename({
+        oldRef: branch.current,
         newRef: newRef,
       });
-      await branchSwitch({ ref: newRef });
     }
   }
 
   render() {
     const { t } = this.props;
+    const { branch } = this.state.gitValues;
     return (
-      <Stack horizontal>
+      <UI.Stack horizontal>
         <Widget.Branch
           filter="local"
           allowNewBranch={true}
-          selection={this.context.values.branchCurrent}
+          selection={branch?.current || undefined}
           onSelect={this.actionSwitchBranch}
         />
         <span ref={this.actionButtonRef}>
-          <IconButton
+          <UI.IconButton
             className={iconButtonClass}
             iconProps={{ iconName: "Settings" }}
             onClick={this.openActionMenu}
           />
         </span>
-        <ContextualMenu
+        <UI.ContextualMenu
           hidden={!this.state.actionMenuOpen}
           onDismiss={this.closeActionMenu}
           items={[
@@ -142,15 +139,15 @@ class Branch extends React.Component<
           ]}
           target={this.actionButtonRef as any}
         />
-      </Stack>
+      </UI.Stack>
     );
   }
 }
 
-export default withTranslation("translation")(Branch);
+export default Intl.withTranslation("translation")(Branch);
 
-const theme = getTheme();
-const iconButtonClass = mergeStyles([
+const theme = UI.getTheme();
+const iconButtonClass = UI.mergeStyles([
   {
     backgroundColor: theme.palette.themePrimary,
     color: theme.palette.white,

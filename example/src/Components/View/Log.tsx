@@ -1,25 +1,11 @@
 import * as React from "react";
+import * as Intl from "react-i18next";
+import * as UI from "@fluentui/react";
 import bind from "bind-decorator";
 
+import Git from "react-git-provider";
+
 import "../../theme";
-
-import { withTranslation, WithTranslation } from "react-i18next";
-import {
-  ShimmeredDetailsList,
-  IColumn,
-  SelectionMode,
-  DetailsRow,
-  IDetailsRowProps,
-  ContextualMenu,
-} from "@fluentui/react";
-
-import Git, {
-  ReadCommitResult,
-  GitValues,
-  GitBakers,
-  GitCommands,
-  GitInternal,
-} from "react-git-provider";
 
 import { View } from "..";
 
@@ -64,19 +50,18 @@ export interface LogState {
   };
 }
 
-class Log extends React.Component<LogProps & WithTranslation, LogState> {
-  static contextType = Git.Context;
-
+class Log extends Git.Component<LogProps & Intl.WithTranslation, LogState> {
   public static defaultProps = {
     columns: ["message", "author", "date"] as LogColumn[],
   };
 
   private contextMenuTarget: Record<string, HTMLElement | null> = {};
 
-  constructor(props: LogProps & WithTranslation) {
+  constructor(props: LogProps & Intl.WithTranslation) {
     super(props);
 
     this.state = {
+      ...this.state,
       items: [],
       sort: { column: "date", ascending: false },
       currentFocus: undefined,
@@ -84,16 +69,16 @@ class Log extends React.Component<LogProps & WithTranslation, LogState> {
         left: undefined,
         right: undefined,
       },
+      gitWatch: {
+        branch: {
+          commitHistory: {},
+        },
+      },
     };
   }
 
-  async componentDidMount() {
-    const { commitHistory } = this.context.bakers as GitBakers;
-    await commitHistory({});
-  }
-
   @bind
-  private onColumnClick(_event: React.MouseEvent, column: IColumn) {
+  private onColumnClick(_event: React.MouseEvent, column: UI.IColumn) {
     const name = column.fieldName as string;
     if (this.state.sort.column === name) {
       this.setState(({ sort }) => ({
@@ -111,48 +96,55 @@ class Log extends React.Component<LogProps & WithTranslation, LogState> {
 
   @bind
   async onRebase(oid: string): Promise<void> {
-    const { branchCheckout } = this.context.commands as GitCommands;
-    await branchCheckout({ oid: oid, updateHead: true, checkout: true });
+    const { branch } = this.context.io;
+    const rebaseResult = await branch.rebase({ oid: oid });
+    if (rebaseResult.type === "error") {
+      const { t } = this.props;
+      this.props.alert(t("error.merge.changes"));
+    }
+  }
+
+  @bind
+  async onAmend(oid: string): Promise<void> {
+    const { branch } = this.context.io;
+    const rebaseResult = await branch.rebase({ oid: oid, noCheckout: true });
+    if (rebaseResult.type === "error") {
+      const { t } = this.props;
+      this.props.alert(t("error.merge.changes"));
+    }
   }
 
   @bind
   async onRevert(oid: string): Promise<void> {
-    const { branchCheckout } = this.context.commands as GitCommands;
-    await branchCheckout({ oid: oid, updateHead: false, checkout: true });
+    const { branch } = this.context.io;
+    const checkoutResult = await branch.checkout({
+      ref: oid,
+      updateHead: false,
+      checkout: true,
+    });
+    if (checkoutResult.type === "error") {
+      const { t } = this.props;
+      this.props.alert(t("error.merge.changes"));
+    }
   }
 
   @bind
   async onNewBranch(oid: string): Promise<void> {
     const { t } = this.props;
-    const { branchCreate, branchSwitch } = this.context.commands as GitCommands;
+    const { branch } = this.context.io;
     const name = await this.props.prompt(
       t("action.branch.new-branch-title"),
       oid
     );
-    const { branchList: branchListBaker } = this.context.bakers as GitBakers;
-    const { branchList } = this.context.values as GitValues;
-    await branchListBaker({});
-    if (name !== false && !branchList["local"].includes(name)) {
-      const { git, fs, basepath } = this.context.internal as GitInternal;
-      await branchCreate({ ref: name });
-      await branchSwitch({ ref: name });
-      const ref = await git.resolveRef({
-        fs: fs,
-        dir: basepath,
-        ref: "HEAD",
-        depth: 2,
-      });
-      console.log(ref);
-
-      await git.writeRef({
-        fs,
-        dir: basepath,
-        ref: "HEAD",
-        value: ref,
-        force: true,
-        symbolic: true,
-      });
-      // await branchCheckout({ oid: oid, checkout: true, updateHead: true });
+    const branchList = await branch.list({});
+    if (
+      branchList.type === "success" &&
+      name !== false &&
+      !branchList.value["local"].includes(name)
+    ) {
+      await branch.create({ ref: name });
+      await branch.rebase({ ref: name, oid: oid });
+      await branch.checkout({ ref: name });
     } else if (name !== false) {
       this.props.alert(t("error.branch.unique"));
     }
@@ -161,16 +153,10 @@ class Log extends React.Component<LogProps & WithTranslation, LogState> {
   @bind
   async onDiff(side: "left" | "right", oid: string): Promise<void> {
     this.setState(({ diff }) => ({ diff: { ...diff, [side]: oid } }));
-    if (
-      this.state.diff.left !== undefined &&
-      this.state.diff.right !== undefined
-    ) {
-      console.log("diffing", this.state.diff);
-    }
   }
 
   @bind
-  private makeColumns(): IColumn[] {
+  private makeColumns(): UI.IColumn[] {
     const { t, columns } = this.props;
     const cols = allColumns.filter((key) =>
       (columns as LogColumn[]).includes(key)
@@ -188,10 +174,11 @@ class Log extends React.Component<LogProps & WithTranslation, LogState> {
   }
 
   @bind
-  private makeHistory(
-    items: ReadCommitResult[],
-    { column, ascending }: { column: LogColumn; ascending: boolean }
-  ) {
+  private makeHistory() {
+    const { branch } = this.state.gitValues;
+    if (branch?.commitHistory === undefined) return [];
+    const items = branch.commitHistory;
+    const { column, ascending } = this.state.sort;
     return items
       .map((commit: any) => ({
         oid: commit.oid,
@@ -212,7 +199,7 @@ class Log extends React.Component<LogProps & WithTranslation, LogState> {
   }
 
   @bind
-  renderRow(props?: IDetailsRowProps) {
+  renderRow(props?: UI.IDetailsRowProps) {
     if (props) {
       return (
         <div
@@ -221,7 +208,7 @@ class Log extends React.Component<LogProps & WithTranslation, LogState> {
           }
           onClick={() => this.setState({ currentFocus: props.item.oid })}
         >
-          <DetailsRow {...props} indentWidth={0} />
+          <UI.DetailsRow {...props} indentWidth={0} />
         </div>
       );
     }
@@ -233,12 +220,12 @@ class Log extends React.Component<LogProps & WithTranslation, LogState> {
     const { t } = this.props;
     return [
       {
-        key: "rebase",
-        text: t("log.action.rebase"),
-        iconProps: { iconName: "Download" },
+        key: "ammend",
+        text: t("log.action.ammend"),
+        iconProps: { iconName: "Repair" },
         onClick: () =>
           (this.state.currentFocus &&
-            this.onRebase(this.state.currentFocus) &&
+            this.onAmend(this.state.currentFocus) &&
             undefined) ||
           undefined,
       },
@@ -249,6 +236,16 @@ class Log extends React.Component<LogProps & WithTranslation, LogState> {
         onClick: () =>
           (this.state.currentFocus &&
             this.onRevert(this.state.currentFocus) &&
+            undefined) ||
+          undefined,
+      },
+      {
+        key: "rebase",
+        text: t("log.action.rebase"),
+        iconProps: { iconName: "DrillThrough" },
+        onClick: () =>
+          (this.state.currentFocus &&
+            this.onRebase(this.state.currentFocus) &&
             undefined) ||
           undefined,
       },
@@ -295,17 +292,16 @@ class Log extends React.Component<LogProps & WithTranslation, LogState> {
   }
 
   render() {
-    const { commitHistory } = this.context.values as GitValues;
     return (
       <React.Fragment>
-        <ShimmeredDetailsList
+        <UI.ShimmeredDetailsList
           compact={true}
           columns={this.makeColumns()}
-          items={this.makeHistory(commitHistory, this.state.sort)}
-          selectionMode={SelectionMode.none}
+          items={this.makeHistory()}
+          selectionMode={UI.SelectionMode.none}
           onRenderRow={this.renderRow}
         />
-        <ContextualMenu
+        <UI.ContextualMenu
           hidden={this.state.currentFocus === undefined}
           onDismiss={() => this.setState({ currentFocus: undefined })}
           items={this.renderContextMenuItems()}
@@ -328,4 +324,4 @@ class Log extends React.Component<LogProps & WithTranslation, LogState> {
   }
 }
 
-export default withTranslation("translation")(Log);
+export default Intl.withTranslation("translation")(Log);

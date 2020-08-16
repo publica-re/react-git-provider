@@ -1,13 +1,6 @@
 import * as React from "react";
+import * as UI from "@fluentui/react";
 
-import {
-  Overlay,
-  Spinner,
-  SpinnerSize,
-  IOverlayStyles,
-  getTheme,
-  Layer,
-} from "@fluentui/react";
 import "../../theme";
 
 export interface LoaderProps {
@@ -19,23 +12,23 @@ export interface LoaderState {}
 class Loader extends React.Component<LoaderProps, LoaderState> {
   render() {
     return (
-      <Layer>
-        <Overlay styles={overlayStyle}>
-          <Spinner
+      <UI.Layer>
+        <UI.Overlay styles={overlayStyle}>
+          <UI.Spinner
             label={this.props.message}
-            size={SpinnerSize.large}
+            size={UI.SpinnerSize.large}
             color={theme.palette.white}
           />
-        </Overlay>
-      </Layer>
+        </UI.Overlay>
+      </UI.Layer>
     );
   }
 }
 
 export default Loader;
 
-const theme = getTheme();
-const overlayStyle: IOverlayStyles = {
+const theme = UI.getTheme();
+const overlayStyle: UI.IOverlayStyles = {
   root: {
     backgroundColor: theme.palette.whiteTranslucent40,
     zIndex: 9999,

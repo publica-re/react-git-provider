@@ -1,6 +1,6 @@
 {
   "name": "react-git-provider",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "A Git provider for React",
   "author": {
     "name": "David Baumgartner",
@@ -57,9 +57,13 @@
     "@isomorphic-git/lightning-fs": "^4.3.0",
     "@material-ui/icons": "^4.9.1",
     "@types/diff": "^4.0.2",
+    "@types/lodash": "^4.14.159",
     "bind-decorator": "^1.0.11",
     "diff": "^4.0.2",
+    "eventemitter3": "^4.0.4",
     "isomorphic-git": "^1.7.4",
+    "jsdiff": "^1.1.1",
+    "lodash": "^4.17.19",
     "path": "^0.12.7"
   }
 }

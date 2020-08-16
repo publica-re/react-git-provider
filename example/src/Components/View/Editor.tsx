@@ -1,84 +1,82 @@
 import * as React from "react";
+import * as Intl from "react-i18next";
+import * as UI from "@fluentui/react";
 import bind from "bind-decorator";
 
+import Git, { GitComponentState } from "react-git-provider";
+
 import "../../theme";
-
-import { withTranslation, WithTranslation, Trans } from "react-i18next";
-import { TextField, PrimaryButton, Stack, mergeStyles } from "@fluentui/react";
-
-import Git, { GitBakers, GitValues, GitCommands } from "react-git-provider";
 
 export interface EditorProps {
   filePath: string;
 }
 
 export interface EditorState {
-  initialContent?: string;
   currentContent?: string;
 }
 
-class Editor extends React.Component<
-  EditorProps & WithTranslation,
+class Editor extends Git.Component<
+  EditorProps & Intl.WithTranslation,
   EditorState
 > {
-  static contextType = Git.Context;
-
-  constructor(props: EditorProps & WithTranslation) {
+  constructor(props: EditorProps & Intl.WithTranslation) {
     super(props);
 
     this.state = {
-      initialContent: "",
+      ...this.state,
       currentContent: "",
+      gitWatch: {
+        file: {
+          read: { path: props.filePath, mode: "text" },
+        },
+      },
     };
   }
 
   @bind
-  async componentDidMount() {
-    const { fileRead } = this.context.bakers as GitBakers;
-    await fileRead({ path: this.props.filePath, mode: "text" });
-    const { fileData } = this.context.values as GitValues;
-    this.setState({
-      initialContent: fileData,
-      currentContent: fileData,
-    });
-  }
-
-  @bind
-  async componentDidUpdate(prevProps: EditorProps, prevState: EditorState) {
-    const { fileRead } = this.context.bakers as GitBakers;
-    const { fileData } = this.context.values as GitValues;
-
+  async componentDidUpdate(
+    prevProps: EditorProps,
+    prevState: EditorState & GitComponentState
+  ) {
+    super.componentDidUpdate(prevProps, prevState);
     if (prevProps.filePath !== this.props.filePath) {
-      await fileRead({ path: this.props.filePath });
-    } else {
-      if (fileData !== prevState.initialContent) {
-        this.setState({
-          initialContent: fileData,
-          currentContent: fileData,
-        });
-      }
+      this.setState(({ gitWatch }) => ({
+        gitWatch: {
+          ...gitWatch,
+          file: {
+            ...gitWatch.file,
+            read: { path: this.props.filePath, mode: "text" },
+          },
+        },
+      }));
+    }
+    if (prevState.gitValues.file?.read !== this.state.gitValues.file?.read) {
+      this.setState({
+        currentContent: (this.state.gitValues.file?.read || "") as string,
+      });
     }
   }
 
   @bind
-  save() {
-    const { fileWrite } = this.context.commands as GitCommands;
-    fileWrite({
+  async save() {
+    const { file } = this.context.io;
+    await file.write({
       path: this.props.filePath,
-      content: this.state.currentContent || this.state.initialContent || "",
+      content: this.state.currentContent || "",
     });
   }
 
   render() {
     return (
-      <Stack className={contentClass}>
-        <PrimaryButton onClick={this.save}>
-          <Trans ns="translation" i18nKey="file.save" />
-        </PrimaryButton>
-        <TextField
+      <UI.Stack className={contentClass}>
+        <UI.PrimaryButton onClick={this.save} style={{ height: "2em" }}>
+          <Intl.Trans ns="translation" i18nKey="file.save" />
+        </UI.PrimaryButton>
+        <UI.TextField
           multiline
           className={inputClass}
           borderless={true}
+          style={{ height: "calc(100vh - 6em)" }}
           onChange={(_event: React.FormEvent, newValue?: string) =>
             newValue &&
             this.setState({
@@ -87,22 +85,23 @@ class Editor extends React.Component<
           }
           value={this.state.currentContent}
         />
-      </Stack>
+      </UI.Stack>
     );
   }
 }
 
-export default withTranslation("translation")(Editor);
+export default Intl.withTranslation("translation")(Editor);
 
-const contentClass = mergeStyles([
+const contentClass = UI.mergeStyles([
   {
     display: "flex",
     flex: "1",
     height: "100%",
+    overflow: "hidden",
   },
 ]);
 
-const inputClass = mergeStyles([
+const inputClass = UI.mergeStyles([
   {
     height: "100%",
   },

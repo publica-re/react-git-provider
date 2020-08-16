@@ -61,3 +61,31 @@ export type CompareStatus =
       leftIsBinary: boolean;
       rightIsBinary: boolean;
     };
+
+export interface DirectoryCompare {
+  [path: string]: CompareStatus;
+}
+
+export interface DirectoryStatus {
+  [path: string]: FileStatus;
+}
+
+export type MergeConflictSolution =
+  | {
+      file: string;
+      type: "binary";
+      left: Uint8Array;
+      right: Uint8Array;
+      accept?: boolean;
+    }
+  | {
+      file: string;
+      type: "patch";
+      content: string;
+      accept?: boolean;
+    };
+
+export interface AuthorType {
+  name: string;
+  email: string;
+}

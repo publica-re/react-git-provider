@@ -1,40 +1,46 @@
 import * as React from "react";
+import * as Intl from "react-i18next";
+import * as UI from "@fluentui/react";
 
-import { withTranslation, WithTranslation } from "react-i18next";
-import { Stack, TextField } from "@fluentui/react";
+import Git from "react-git-provider";
+
 import "../../theme";
-
-import Git, { GitBakers } from "react-git-provider";
 
 export interface RemoteProps {}
 
 export interface RemoteState {}
 
-class Remote extends React.Component<
-  RemoteProps & WithTranslation,
+class Remote extends Git.Component<
+  RemoteProps & Intl.WithTranslation,
   RemoteState
 > {
-  static contextType = Git.Context;
+  constructor(props: RemoteProps & Intl.WithTranslation) {
+    super(props);
 
-  async componentDidMount() {
-    const { remoteList } = this.context.bakers as GitBakers;
-    await remoteList({});
+    this.state = {
+      ...this.state,
+      gitWatch: {
+        remote: {
+          list: {},
+        },
+      },
+    };
   }
 
   render() {
+    const { remote } = this.state.gitValues;
+    if (remote?.list === undefined) return null;
     return (
-      <Stack>
-        {this.context.values.remoteList.map(
-          ({ remote, url }: { remote: string; url: string }) => (
-            <Stack horizontal tokens={{ childrenGap: 15 }}>
-              <TextField label="Name" defaultValue={remote} />
-              <TextField label="Adress" defaultValue={url} />
-            </Stack>
-          )
-        )}
-      </Stack>
+      <UI.Stack>
+        {remote.list.map(({ remote, url }: { remote: string; url: string }) => (
+          <UI.Stack horizontal tokens={{ childrenGap: 15 }}>
+            <UI.TextField label="Name" defaultValue={remote} />
+            <UI.TextField label="Adress" defaultValue={url} />
+          </UI.Stack>
+        ))}
+      </UI.Stack>
     );
   }
 }
 
-export default withTranslation("translation")(Remote);
+export default Intl.withTranslation("translation")(Remote);

@@ -15,13 +15,8 @@ export function fileRead(
     mode,
   }: FileReadOptions): Promise<string | Uint8Array | undefined> {
     const physicalPath = pathUtils.join(internal.basepath, path);
-    try {
-      return await internal.fs.promises.readFile(physicalPath, {
-        encoding: mode === "binary" ? undefined : "utf8",
-      });
-    } catch (e) {
-      internal.events.error(e);
-      return undefined;
-    }
+    return await internal.fs.promises.readFile(physicalPath, {
+      encoding: mode === "binary" ? undefined : "utf8",
+    });
   };
 }

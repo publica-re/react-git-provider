@@ -1,17 +1,11 @@
 import * as React from "react";
+import * as Intl from "react-i18next";
+import * as UI from "@fluentui/react";
 import bind from "bind-decorator";
 
-import { withTranslation, WithTranslation } from "react-i18next";
-import { Stack, TextField, DefaultButton } from "@fluentui/react";
-import "../../theme";
+import Git, { GitStatusOption } from "react-git-provider";
 
-import Git, {
-  FileStatus,
-  GitStatusOption,
-  GitValues,
-  GitBakers,
-  GitCommands,
-} from "react-git-provider";
+import "../../theme";
 
 export interface CommitProps {}
 
@@ -20,25 +14,30 @@ export interface CommitState {
   modifiedKeyDown: boolean;
 }
 
-class Commit extends React.Component<
-  CommitProps & WithTranslation,
+class Commit extends Git.Component<
+  CommitProps & Intl.WithTranslation,
   CommitState
 > {
   static contextType = Git.Context;
 
-  constructor(props: CommitProps & WithTranslation) {
+  constructor(props: CommitProps & Intl.WithTranslation) {
     super(props);
 
     this.state = {
+      ...this.state,
       message: "",
       modifiedKeyDown: false,
+      gitWatch: {
+        directory: {
+          status: {},
+        },
+      },
     };
   }
 
   @bind
   async componentDidMount() {
-    const { directoryStatus } = this.context.bakers as GitBakers;
-    await directoryStatus({});
+    super.componentDidMount();
     document.addEventListener("keydown", (event) =>
       this.setState({ modifiedKeyDown: event.ctrlKey })
     );
@@ -48,59 +47,61 @@ class Commit extends React.Component<
   }
 
   @bind
+  private setMessage(message?: string) {
+    this.setState({ message: message || "" });
+  }
+
+  @bind
   private doCommit() {
-    const { repositoryStageAndCommit, repositoryCommit } = this.context
-      .commands as GitCommands;
+    const { repository } = this.context.io;
+    const { directory } = this.state.gitValues;
+    if (directory?.status === undefined) return;
     if (this.state.message?.length > 0) {
-      const { fileStatusTree } = this.context.values as GitValues;
-      const anyStaged =
-        (Object.values(fileStatusTree) as FileStatus[]).findIndex(
-          (value) => value?.status?.staged
-        ) > -1;
+      const allStatuses = Object.values(directory.status);
+      const anyStaged = allStatuses.some((value) => value?.status?.staged);
       if (this.state.modifiedKeyDown || !anyStaged) {
-        repositoryStageAndCommit({ message: this.state.message });
-        this.setState({ message: "" });
+        repository.stageAndCommit({ message: this.state.message });
+        this.setMessage();
       } else {
-        repositoryCommit({ message: this.state.message });
-        this.setState({ message: "" });
+        repository.commit({ message: this.state.message });
+        this.setMessage();
       }
     }
   }
 
   render() {
     const { t } = this.props;
-    const { fileStatusTree } = this.context.values as GitValues;
-    const anyStaged =
-      (Object.values(fileStatusTree) as FileStatus[]).findIndex(
-        (value) => value?.status?.staged
-      ) > -1;
-    const anyModified =
-      (Object.values(fileStatusTree) as FileStatus[]).findIndex(
-        (value) => value?.status?.option !== GitStatusOption.UnModified
-      ) > -1;
+    const { modifiedKeyDown } = this.state;
+    const { directory } = this.state.gitValues;
+    if (directory?.status === undefined) return null;
+    const allStatuses = Object.values(directory.status);
+    const anyStaged = allStatuses.some((value) => value?.status?.staged);
+    const anyModified = allStatuses.some(
+      (value) => value?.status?.option !== GitStatusOption.UnModified
+    );
     return (
-      <Stack horizontal>
-        <TextField
+      <UI.Stack horizontal>
+        <UI.TextField
           prefix={t("commit.message")}
           onChange={(_event: React.FormEvent, newValue?: string) =>
-            newValue && this.setState({ message: newValue })
+            this.setMessage(newValue)
           }
           value={this.state.message}
         />
-        <DefaultButton
+        <UI.DefaultButton
           onClick={this.doCommit}
           disabled={!anyModified}
           text={
-            this.state.modifiedKeyDown || !anyStaged
+            modifiedKeyDown || !anyStaged
               ? anyModified
                 ? t("commit.stage-commit")
                 : t("commit.nothing")
               : t("commit.staged")
           }
         />
-      </Stack>
+      </UI.Stack>
     );
   }
 }
 
-export default withTranslation("translation")(Commit);
+export default Intl.withTranslation("translation")(Commit);

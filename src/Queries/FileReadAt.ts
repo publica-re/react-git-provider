@@ -15,17 +15,12 @@ export function fileReadAt(
     oid,
   }: FileReadAtOptions): Promise<string | undefined> {
     const relativePath = pathUtils.relative("/", path);
-    try {
-      const { blob } = await internal.git.readBlob({
-        fs: internal.fs,
-        dir: internal.basepath,
-        oid: oid,
-        filepath: relativePath,
-      });
-      return Buffer.from(blob).toString("utf8");
-    } catch (e) {
-      internal.events.error(e);
-      return undefined;
-    }
+    const { blob } = await internal.git.readBlob({
+      fs: internal.fs,
+      dir: internal.basepath,
+      oid: oid,
+      filepath: relativePath,
+    });
+    return Buffer.from(blob).toString("utf8");
   };
 }

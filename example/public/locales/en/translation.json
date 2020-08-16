@@ -13,7 +13,11 @@
     "history": "History",
     "file-pick": "Choose a file",
     "directory-pick": "Choose a file",
-    "diff": "Compare"
+    "diff": "Compare",
+    "issues": "Issues",
+    "merge-requests": "Merge requests",
+    "profile": "Profile",
+    "sign-out": "Sign out"
   },
   "auth": {
     "username": "User name",
@@ -40,8 +44,9 @@
       "date": "Date"
     },
     "action": {
-      "rebase": "Forget changes until here",
-      "revert": "Restore this state",
+      "ammend": "Discard commits, keep changes",
+      "revert": "Keep commits, restore state",
+      "rebase": "Discard commits, restore state",
       "new-branch": "Create a new branch here",
       "diff": "Compare",
       "diff-left": "Left-hand-side",
@@ -51,6 +56,7 @@
   "action": {
     "new": "New",
     "properties": "Properties",
+    "rebase": "Rebase",
     "directory": {
       "new": "New folder",
       "download": "Download everything",
@@ -131,6 +137,18 @@
     },
     "file": {
       "already-exists": "File already exists."
+    },
+    "merge": {
+      "conflict": "Unable to merge the two branches.",
+      "conflict-continue": "There were conflicts during the merge. To continue, we need to switch branch, which could cause data loss on non-committed changes. Should we still procceed ?",
+      "changes": "You have uncommited changes. Commit or discard your changes first.",
+      "push-conflicts": "Distant branch has more recent changes. Are you sure you want to continue?"
     }
+  },
+  "merge": {
+    "accept": "Accept changes and merge"
+  },
+  "push": {
+    "not-allowed": "Vous n'êtes pas autorisé à pousser sur cette branche."
   }
 }

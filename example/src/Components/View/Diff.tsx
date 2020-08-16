@@ -1,21 +1,11 @@
 import * as React from "react";
+import * as Intl from "react-i18next";
+import * as UI from "@fluentui/react";
 import bind from "bind-decorator";
-
-import { withTranslation, WithTranslation, Trans } from "react-i18next";
 import DiffViewer, { DiffMethod } from "react-diff-viewer";
 
-import Git, { GitBakers, CompareStatus } from "react-git-provider";
-import {
-  Stack,
-  Modal,
-  IconButton,
-  getTheme,
-  mergeStyleSets,
-  FontWeights,
-  ChoiceGroup,
-  IChoiceGroupOption,
-  Separator,
-} from "@fluentui/react";
+import Git, { GitComponentState } from "react-git-provider";
+
 import "../../theme";
 
 import { Utils } from "..";
@@ -29,48 +19,53 @@ export interface DiffProps {
 type TrueDiffMethod = DiffMethod | "diffJson";
 
 export interface DiffState {
-  status?: {
-    [path: string]: CompareStatus;
-  };
   compareMethod: { [index: number]: TrueDiffMethod };
   messages: string[];
 }
 
-class Diff extends React.Component<DiffProps & WithTranslation, DiffState> {
+class Diff extends Git.Component<DiffProps & Intl.WithTranslation, DiffState> {
   static contextType = Git.Context;
 
-  constructor(props: DiffProps & WithTranslation) {
+  constructor(props: DiffProps & Intl.WithTranslation) {
     super(props);
 
     this.state = {
-      status: undefined,
+      ...this.state,
       compareMethod: {},
       messages: [],
+      gitWatch: {
+        directory: {
+          compare: {
+            left: props.left,
+            right: props.right,
+          },
+        },
+      },
     };
   }
 
-  async componentDidUpdate(prevProps: DiffProps) {
+  async componentDidUpdate(
+    prevProps: DiffProps & Intl.WithTranslation,
+    prevState: DiffState & GitComponentState
+  ) {
+    super.componentDidUpdate(prevProps, prevState);
     if (
       prevProps.left !== this.props.left ||
       prevProps.right !== this.props.right
     ) {
-      await this.makeDiff();
+      this.setState(({ gitWatch }) => ({
+        gitWatch: {
+          ...gitWatch,
+          directory: {
+            ...gitWatch.directory,
+            compare: {
+              left: this.props.left,
+              right: this.props.right,
+            },
+          },
+        },
+      }));
     }
-  }
-
-  async componentDidMount() {
-    await this.makeDiff();
-  }
-
-  @bind
-  async makeDiff() {
-    const { directoryCompare } = this.context.bakers as GitBakers;
-    let left = this.props.left;
-    let right = this.props.right;
-    const compare = await directoryCompare({ left: left, right: right });
-    this.setState({
-      status: compare,
-    });
   }
 
   @bind
@@ -112,13 +107,17 @@ class Diff extends React.Component<DiffProps & WithTranslation, DiffState> {
         text: t("diff.css"),
         iconProps: { iconName: "BarChartVerticalEdit" },
       },
-    ] as IChoiceGroupOption[];
+    ] as UI.IChoiceGroupOption[];
   }
 
   render() {
     const { t } = this.props;
+    const { directory } = this.state.gitValues;
+    if (directory?.compare === undefined)
+      return <Utils.Loader message={this.state.messages[0]} />;
+    const status = directory?.compare;
     return (
-      <Modal
+      <UI.Modal
         titleAriaId={`diff-${this.props.left}-${this.props.right}`}
         isOpen={true}
         onDismiss={this.props.onClose}
@@ -127,9 +126,9 @@ class Diff extends React.Component<DiffProps & WithTranslation, DiffState> {
       >
         <div className={contentStyles.header}>
           <span id={`diff-${this.props.left}-${this.props.right}`}>
-            <Trans ns="translation" i18nKey="title.diff" />
+            <Intl.Trans ns="translation" i18nKey="title.diff" />
           </span>
-          <IconButton
+          <UI.IconButton
             styles={iconButtonStyles}
             iconProps={{ iconName: "Cancel" }}
             ariaLabel={t("action.close")}
@@ -137,64 +136,63 @@ class Diff extends React.Component<DiffProps & WithTranslation, DiffState> {
           />
         </div>
         <div className={contentStyles.body}>
-          {(this.state.status &&
-            Object.entries(this.state.status).map(
-              ([path, compareResult]: [string, any], index) => {
-                if (compareResult.type === "unchanged") return null;
-                return (
-                  <Stack key={`diff-${index}`}>
-                    <DiffViewer
-                      leftTitle={path}
-                      rightTitle={t(`diff.${compareResult.type}`)}
-                      compareMethod={
-                        this.state.compareMethod[index] as DiffMethod
-                      }
-                      oldValue={
-                        compareResult.leftIsBinary
-                          ? "Binary file"
-                          : compareResult.leftContent
-                      }
-                      newValue={
-                        compareResult.rightIsBinary
-                          ? "Binary file"
-                          : compareResult.rightContent
-                      }
-                      splitView={true}
-                    />
-                    <ChoiceGroup
-                      label={t("diff.mode")}
-                      selectedKey={
-                        this.state.compareMethod[index] || DiffMethod.CHARS
-                      }
-                      onChange={(
-                        _event?: React.FormEvent,
-                        option?: IChoiceGroupOption
-                      ) =>
-                        option?.key &&
-                        this.setState(({ compareMethod }) => ({
-                          compareMethod: {
-                            ...compareMethod,
-                            [index]: option.key as TrueDiffMethod,
-                          },
-                        }))
-                      }
-                      options={this.diffOptions()}
-                    />
-                    <Separator />
-                  </Stack>
-                );
-              }
-            )) || <Utils.Loader message={this.state.messages[0]} />}
+          {Object.entries(status).map(
+            ([path, compareResult]: [string, any], index) => {
+              if (compareResult.type === "unchanged") return null;
+              return (
+                <UI.Stack key={`diff-${index}`}>
+                  <DiffViewer
+                    leftTitle={path}
+                    rightTitle={t(`diff.${compareResult.type}`)}
+                    compareMethod={
+                      this.state.compareMethod[index] as DiffMethod
+                    }
+                    oldValue={
+                      compareResult.leftIsBinary
+                        ? "Binary file"
+                        : compareResult.leftContent
+                    }
+                    newValue={
+                      compareResult.rightIsBinary
+                        ? "Binary file"
+                        : compareResult.rightContent
+                    }
+                    splitView={true}
+                  />
+                  <UI.ChoiceGroup
+                    label={t("diff.mode")}
+                    selectedKey={
+                      this.state.compareMethod[index] || DiffMethod.CHARS
+                    }
+                    onChange={(
+                      _event?: React.FormEvent,
+                      option?: UI.IChoiceGroupOption
+                    ) =>
+                      option?.key &&
+                      this.setState(({ compareMethod }) => ({
+                        compareMethod: {
+                          ...compareMethod,
+                          [index]: option.key as TrueDiffMethod,
+                        },
+                      }))
+                    }
+                    options={this.diffOptions()}
+                  />
+                  <UI.Separator />
+                </UI.Stack>
+              );
+            }
+          )}
         </div>
-      </Modal>
+      </UI.Modal>
     );
   }
 }
 
-export default withTranslation("translation")(Diff);
+export default Intl.withTranslation("translation")(Diff);
 
-const theme = getTheme();
-const contentStyles = mergeStyleSets({
+const theme = UI.getTheme();
+const contentStyles = UI.mergeStyleSets({
   container: {
     display: "flex",
     flexFlow: "column nowrap",
@@ -207,7 +205,7 @@ const contentStyles = mergeStyleSets({
       flex: "1 1 auto",
       display: "flex",
       alignItems: "center",
-      fontWeight: FontWeights.semibold,
+      fontWeight: UI.FontWeights.semibold,
       padding: "12px 12px 14px 24px",
     },
   ],

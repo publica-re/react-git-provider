@@ -1,65 +1,57 @@
 import * as React from "react";
-
-import { WithTranslation, withTranslation, Trans } from "react-i18next";
-import {
-  DefaultButton,
-  PrimaryButton,
-  Dialog,
-  DialogFooter,
-} from "@fluentui/react";
-import "../../theme";
+import * as Intl from "react-i18next";
+import * as UI from "@fluentui/react";
 
 import Git from "react-git-provider";
+
+import "../../theme";
 
 export interface AlertProps {
   title: string;
   isVisible: boolean;
+  canChoose: boolean;
   onClose: () => void;
   onConfirm?: () => void;
 }
 
 export interface AlertState {}
 
-class Alert extends React.Component<AlertProps & WithTranslation, AlertState> {
-  static contextType = Git.Context;
-
-  constructor(props: AlertProps & WithTranslation) {
-    super(props);
-
-    this.state = {};
-  }
-
+class Alert extends Git.Component<
+  AlertProps & Intl.WithTranslation,
+  AlertState
+> {
   render() {
+    const { title, isVisible, onClose, onConfirm, canChoose } = this.props;
     return (
-      <Dialog
-        hidden={!this.props.isVisible}
+      <UI.Dialog
+        hidden={!isVisible}
         modalProps={{
           isBlocking: false,
         }}
         dialogContentProps={{
-          title: this.props.title,
+          title: title,
         }}
-        onDismiss={this.props.onClose}
+        onDismiss={onClose}
       >
-        <DialogFooter>
-          {this.props.onConfirm !== undefined ? (
+        <UI.DialogFooter>
+          {canChoose ? (
             <React.Fragment>
-              <DefaultButton onClick={this.props.onClose}>
-                <Trans ns="translation" i18nKey="dialog.cancel" />
-              </DefaultButton>
-              <PrimaryButton onClick={this.props.onConfirm}>
-                <Trans ns="translation" i18nKey="dialog.confirm" />
-              </PrimaryButton>
+              <UI.DefaultButton onClick={onClose}>
+                <Intl.Trans ns="translation" i18nKey="dialog.cancel" />
+              </UI.DefaultButton>
+              <UI.PrimaryButton onClick={onConfirm}>
+                <Intl.Trans ns="translation" i18nKey="dialog.confirm" />
+              </UI.PrimaryButton>
             </React.Fragment>
           ) : (
-            <PrimaryButton onClick={this.props.onClose}>
-              <Trans ns="translation" i18nKey="dialog.confirm" />
-            </PrimaryButton>
+            <UI.PrimaryButton onClick={onConfirm}>
+              <Intl.Trans ns="translation" i18nKey="dialog.confirm" />
+            </UI.PrimaryButton>
           )}
-        </DialogFooter>
-      </Dialog>
+        </UI.DialogFooter>
+      </UI.Dialog>
     );
   }
 }
 
-export default withTranslation("translation")(Alert);
+export default Intl.withTranslation("translation")(Alert);

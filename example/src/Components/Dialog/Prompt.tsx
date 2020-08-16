@@ -1,17 +1,10 @@
 import * as React from "react";
+import * as Intl from "react-i18next";
+import * as UI from "@fluentui/react";
 
-import { WithTranslation, withTranslation, Trans } from "react-i18next";
-import {
-  DefaultButton,
-  PrimaryButton,
-  TextField,
-  DialogContent,
-  DialogFooter,
-  Dialog,
-} from "@fluentui/react";
+import Git, { GitComponentState } from "react-git-provider";
+
 import "../../theme";
-
-import Git from "react-git-provider";
 
 export interface PromptProps {
   title: string;
@@ -25,60 +18,64 @@ export interface PromptState {
   currentValue: string;
 }
 
-class Prompt extends React.Component<
-  PromptProps & WithTranslation,
+class Prompt extends Git.Component<
+  PromptProps & Intl.WithTranslation,
   PromptState
 > {
-  static contextType = Git.Context;
-
-  constructor(props: PromptProps & WithTranslation) {
+  constructor(props: PromptProps & Intl.WithTranslation) {
     super(props);
 
     this.state = {
+      ...this.state,
       currentValue: props.defaultValue,
     };
   }
 
-  componentDidUpdate(prevProps: PromptProps) {
+  componentDidUpdate(
+    prevProps: PromptProps,
+    prevState: PromptState & GitComponentState
+  ) {
+    super.componentDidUpdate(prevProps, prevState);
     if (prevProps.defaultValue !== this.props.defaultValue) {
       this.setState({ currentValue: this.props.defaultValue });
     }
   }
 
   render() {
+    const { isVisible, title, onAbort } = this.props;
     return (
-      <Dialog
-        hidden={!this.props.isVisible}
+      <UI.Dialog
+        hidden={!isVisible}
         modalProps={{
           isBlocking: false,
         }}
         dialogContentProps={{
-          title: this.props.title,
+          title: title,
         }}
-        onDismiss={this.props.onAbort}
+        onDismiss={onAbort}
       >
-        <DialogContent>
-          <TextField
+        <UI.DialogContent>
+          <UI.TextField
             value={this.state.currentValue}
             autoFocus={true}
             onChange={(_event, option) =>
               option !== undefined && this.setState({ currentValue: option })
             }
           />
-        </DialogContent>
-        <DialogFooter>
-          <DefaultButton onClick={this.props.onAbort}>
-            <Trans ns="translation" i18nKey="dialog.cancel" />
-          </DefaultButton>
-          <PrimaryButton
+        </UI.DialogContent>
+        <UI.DialogFooter>
+          <UI.DefaultButton onClick={this.props.onAbort}>
+            <Intl.Trans ns="translation" i18nKey="dialog.cancel" />
+          </UI.DefaultButton>
+          <UI.PrimaryButton
             onClick={() => this.props.onChange(this.state.currentValue)}
           >
-            <Trans ns="translation" i18nKey="dialog.confirm" />
-          </PrimaryButton>
-        </DialogFooter>
-      </Dialog>
+            <Intl.Trans ns="translation" i18nKey="dialog.confirm" />
+          </UI.PrimaryButton>
+        </UI.DialogFooter>
+      </UI.Dialog>
     );
   }
 }
 
-export default withTranslation("translation")(Prompt);
+export default Intl.withTranslation("translation")(Prompt);

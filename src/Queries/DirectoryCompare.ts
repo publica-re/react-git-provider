@@ -1,7 +1,7 @@
 import { GitInternal } from "../Types";
 import { WalkerEntry } from "isomorphic-git";
 import { nonPrintableChars } from "./_utils";
-import { CompareStatus } from ".";
+import { CompareStatus, DirectoryCompare } from ".";
 
 export type DirectoryCompareOptions = {
   left: string;
@@ -10,15 +10,11 @@ export type DirectoryCompareOptions = {
 
 export function directoryCompare(
   internal: GitInternal
-): (
-  options: DirectoryCompareOptions
-) => Promise<{ [path: string]: CompareStatus }> {
+): (options: DirectoryCompareOptions) => Promise<DirectoryCompare> {
   return async function directoryStatusHelper({
     left,
     right,
-  }: DirectoryCompareOptions): Promise<{
-    [path: string]: CompareStatus;
-  }> {
+  }: DirectoryCompareOptions): Promise<DirectoryCompare> {
     const { fs, git, basepath } = internal;
     const out: { [path: string]: CompareStatus }[] = await git.walk({
       fs: fs,

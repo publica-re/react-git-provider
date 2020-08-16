@@ -17,41 +17,33 @@ export function fileStatus(
     path,
     ignore,
   }: FileStatusOptions): Promise<FileStatus> {
-    const { base, dir } = pathUtils.parse(path);
+    const base = pathUtils.basename(path);
+    const dir = pathUtils.dirname(path);
+    const physicalPath = pathUtils.join(internal.basepath, path);
+    const relativePath = pathUtils.relative("/", path);
+    const stat = await internal.fs.promises.stat(physicalPath);
+    const objectType =
+      (stat.isFile() && "file") ||
+      (stat.isDirectory() && "directory") ||
+      "unknown";
+    let status: GitStatus | undefined = undefined;
     try {
-      const physicalPath = pathUtils.join(internal.basepath, path);
-      const relativePath = pathUtils.relative("/", path);
-      const stat = await internal.fs.promises.stat(physicalPath);
-      const objectType =
-        (stat.isFile() && "file") ||
-        (stat.isDirectory() && "directory") ||
-        "unknown";
-      let status: GitStatus | undefined = undefined;
-      try {
-        status = gitStatusFromQuery(
-          await internal.git.status({
-            fs: internal.fs,
-            dir: internal.basepath,
-            filepath: relativePath,
-          })
-        );
-      } catch (e) {
-        internal.events.error(e);
-      }
-      return {
-        type: objectType,
-        basename: base,
-        dirname: dir,
-        ignored: (ignore || [".git"]).includes(path),
-        status: status,
-      };
+      status = gitStatusFromQuery(
+        await internal.git.status({
+          fs: internal.fs,
+          dir: internal.basepath,
+          filepath: relativePath,
+        })
+      );
     } catch (e) {
-      internal.events.error(e);
-      return {
-        type: "unknown",
-        basename: base,
-        dirname: dir,
-      };
+      internal.loggers.error(e);
     }
+    return {
+      type: objectType,
+      basename: base,
+      dirname: dir,
+      ignored: (ignore || [".git"]).includes(path),
+      status: status,
+    };
   };
 }

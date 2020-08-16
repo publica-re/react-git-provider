@@ -1,15 +1,11 @@
 import * as React from "react";
+import * as Intl from "react-i18next";
+import * as UI from "@fluentui/react";
+import bind from "bind-decorator";
 
-import { withTranslation, WithTranslation } from "react-i18next";
-import {
-  ComboBox,
-  SelectableOptionMenuItemType,
-  IComboBox,
-  IComboBoxOption,
-} from "@fluentui/react";
+import Git, { BranchList } from "react-git-provider";
+
 import "../../theme";
-
-import Git, { GitBakers, GitValues } from "react-git-provider";
 
 export interface LogProps {
   filter?: "remote" | "local";
@@ -22,70 +18,75 @@ export interface LogState {
   currentSelection: string;
 }
 
-class Branch extends React.Component<LogProps & WithTranslation, LogState> {
-  static contextType = Git.Context;
-
-  constructor(props: LogProps & WithTranslation) {
+class Branch extends Git.Component<LogProps & Intl.WithTranslation, LogState> {
+  constructor(props: LogProps & Intl.WithTranslation) {
     super(props);
 
     this.state = {
+      ...this.state,
       currentSelection: "",
+      gitWatch: {
+        branch: {
+          list: {},
+        },
+      },
     };
   }
 
-  async componentDidMount() {
-    const { branchList } = this.context.bakers as GitBakers;
-    await branchList({});
+  @bind
+  getBranches(): BranchList {
+    const { filter } = this.props;
+    const { branch } = this.state.gitValues;
+    const branchList = branch?.list;
+    if (branchList === undefined) return {};
+    if (filter === "remote") {
+      return Object.keys(branchList)
+        .filter((key: string) => key !== "local")
+        .reduce((obj, key) => ({ ...obj, [key]: branchList[key] }), {});
+    } else if (filter === "local") {
+      return Object.keys(branchList)
+        .filter((key: string) => key === "local")
+        .reduce((obj, key) => ({ ...obj, [key]: branchList[key] }), {});
+    }
+    return branchList;
   }
 
-  prepareBranches(remotes: { [remote: string]: string[] }) {
-    return Object.entries(remotes).flatMap(([remote, branches]) => [
+  getPreparedBranches() {
+    const { filter } = this.props;
+    const branches = this.getBranches();
+    const getName = (remote: string, branch: string) =>
+      filter === "local" ? branch : `${remote}/${branch}`;
+    return Object.entries(branches).flatMap(([remote, branches]) => [
       {
         key: `refs/${remote}`,
         text: remote,
-        itemType: SelectableOptionMenuItemType.Header,
+        itemType: UI.SelectableOptionMenuItemType.Header,
       },
       ...branches.map((branch) => ({
-        key: this.props.filter === "local" ? branch : `${remote}/${branch}`,
-        text: this.props.filter === "local" ? branch : `${remote}/${branch}`,
+        key: getName(remote, branch),
+        text: getName(remote, branch),
       })),
     ]);
   }
   render() {
-    const { branchList } = this.context.values as GitValues;
-    let branches = branchList;
-    if (this.props.filter === "remote") {
-      branches = Object.keys(branches)
-        .filter((key: string) => key !== "local")
-        .reduce((obj, key) => ({ ...obj, [key]: branches[key] }), {});
-    } else if (this.props.filter === "local") {
-      branches = Object.keys(branches)
-        .filter((key: string) => key === "local")
-        .reduce((obj, key) => ({ ...obj, [key]: branches[key] }), {});
-    }
-
+    const { filter, allowNewBranch } = this.props;
     return (
-      <ComboBox
+      <UI.ComboBox
         allowFreeform={
-          this.props.allowNewBranch !== undefined
-            ? this.props.allowNewBranch
-            : this.props.filter === "local"
+          allowNewBranch !== undefined ? allowNewBranch : filter === "local"
         }
         autoComplete={"on"}
         selectedKey={this.props.selection}
-        onChange={(
-          event: React.FormEvent<IComboBox>,
-          option?: IComboBoxOption
-        ) => {
+        onChange={(event, option) => {
           const value =
             option?.key.toString() ||
             ((event.target as unknown) as { value: string }).value;
           this.props.onSelect && this.props.onSelect(value);
         }}
-        options={this.prepareBranches(branches)}
+        options={this.getPreparedBranches()}
       />
     );
   }
 }
 
-export default withTranslation("translation")(Branch);
+export default Intl.withTranslation("translation")(Branch);
