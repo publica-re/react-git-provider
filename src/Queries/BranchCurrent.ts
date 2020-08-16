@@ -15,7 +15,7 @@ export function branchCurrent(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _options: BranchCurrentOptions
   ): Promise<string> {
-    const currentBranch = internal.git.currentBranch({
+    const currentBranch = await internal.git.currentBranch({
       fs: internal.fs,
       dir: internal.basepath,
       fullname: false,
