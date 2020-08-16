@@ -40,6 +40,8 @@ export function repositoryClone(
       onAuth: internal.getAuth,
       onAuthSuccess: internal.handleAuthSuccess,
       onAuthFailure: internal.handleAuthFailure,
+      onMessage: internal.notifications.message,
+      onProgress: internal.notifications.progress,
     });
   };
 }

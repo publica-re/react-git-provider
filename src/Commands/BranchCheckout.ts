@@ -35,6 +35,7 @@ export function branchCheckout(
       ref: ref,
       noCheckout: checkout !== undefined ? !checkout : undefined,
       noUpdateHead: updateHead !== undefined ? !updateHead : undefined,
+      onProgress: internal.notifications.progress,
     });
   };
 }

@@ -55,11 +55,12 @@ export function repositoryPush(
       corsProxy: internal.corsProxy,
       dir: internal.basepath,
       onAuth: internal.getAuth,
-      onMessage: internal.loggers.message,
       remoteRef: remoteRef || defaultRemoteRef,
       remote: remote || defaultPushRemote,
       ref: ref,
       force: force || defaultForce,
+      onMessage: internal.notifications.message,
+      onProgress: internal.notifications.progress,
     });
   };
 }

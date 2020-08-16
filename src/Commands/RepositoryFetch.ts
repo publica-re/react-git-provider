@@ -36,10 +36,11 @@ export function repositoryFetch(
       corsProxy: internal.corsProxy,
       dir: internal.basepath,
       onAuth: internal.getAuth,
-      onMessage: internal.loggers.message,
       remote: remote || defaultPullRemote,
       ref: ref,
       singleBranch: ref !== undefined,
+      onMessage: internal.notifications.message,
+      onProgress: internal.notifications.progress,
     });
   };
 }

@@ -133,6 +133,17 @@ export interface GitInternal {
    * Handle an authentication failure
    */
   handleAuthFailure: (url: string, auth: GitAuth) => void;
+  /**
+   * Messages and errors loggers
+   */
+  notifications: {
+    progress: (params: {
+      phase: string;
+      loaded: number;
+      total: number;
+    }) => void;
+    message: (message: string) => void;
+  };
 }
 
 /**
@@ -173,6 +184,10 @@ export const defaultGitInternal: () => GitInternal = () => ({
   handleAuthFailure: notImplemented,
   handleAuthSuccess: notImplemented,
   author: defaultAuthor,
+  notifications: {
+    message: notImplemented,
+    progress: notImplemented,
+  },
 });
 
 /**

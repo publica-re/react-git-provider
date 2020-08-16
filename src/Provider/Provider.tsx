@@ -217,11 +217,13 @@ export default class Provider extends React.Component<GitProps, GitState> {
     while (this.state.authStatus.type === "waiting") {
       await new Promise((r) => setTimeout(r, 100));
     }
+    console.log(this.state.authStatus);
     if (this.state.authStatus.type === "attempt") {
       return this.state.authStatus.auth;
-    } else {
-      return await this.handleAuth(url, auth);
+    } else if (this.state.authStatus.type === "failed") {
+      alert("Unable to login !");
     }
+    return await auth;
   }
 
   @bind
@@ -275,7 +277,6 @@ export default class Provider extends React.Component<GitProps, GitState> {
     );
   }
 
-  /*
   @bind
   private handleProgress({
     phase,
@@ -292,7 +293,6 @@ export default class Provider extends React.Component<GitProps, GitState> {
       );
     else this.handleMessage(phase);
   }
-  */
 
   @bind
   async componentDidMount(): Promise<void> {
@@ -345,6 +345,10 @@ export default class Provider extends React.Component<GitProps, GitState> {
       getAuth: getAuth,
       handleAuthFailure: this.handleAuthFailure,
       handleAuthSuccess: this.handleAuthSuccess,
+      notifications: {
+        message: this.handleMessage,
+        progress: this.handleProgress,
+      },
     };
   }
 
