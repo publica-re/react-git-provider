@@ -1,24 +1,38 @@
 import { GitInternal } from "../Types";
-import { checkout } from "isomorphic-git";
 
+/**
+ * Parameters for a branch checkout
+ */
 export type BranchCheckoutParams = {
-  oid: string;
+  /**
+   * Reference of the branch to checkout or oid of the commit.
+   */
+  ref: string;
+  /**
+   * Update WORKDIR
+   */
   checkout?: boolean;
+  /**
+   * Update HEAD
+   */
   updateHead?: boolean;
 };
 
-/* TODO: think about that */
+/**
+ * Checkout a branch
+ */
 export function branchCheckout(
   internal: GitInternal
 ): (params: BranchCheckoutParams) => Promise<void> {
   return async function branchCheckoutHelper({
-    oid,
+    ref,
+    checkout,
     updateHead,
   }: BranchCheckoutParams): Promise<void> {
     return await internal.git.checkout({
       fs: internal.fs,
       dir: internal.basepath,
-      ref: oid,
+      ref: ref,
       noCheckout: checkout !== undefined ? !checkout : undefined,
       noUpdateHead: updateHead !== undefined ? !updateHead : undefined,
     });

@@ -1,151 +1,218 @@
 import * as React from "react";
-
+import pathUtils from "path";
 import bind from "bind-decorator";
 
 import http from "isomorphic-git/http/web";
 import git, { PromiseFsClient, GitAuth } from "isomorphic-git";
 import FS from "@isomorphic-git/lightning-fs";
 
-import {
-  branchCreate,
-  branchRemove,
-  branchSwitch,
-  directoryMake,
-  directoryRemove,
-  branchCheckout,
-  repositoryPush,
-  repositoryPull,
-  repositoryInit,
-  repositoryCommit,
-  repositoryClone,
-  remoteAdd,
-  remoteDelete,
-  fileWrite,
-  fileUnstage,
-  fileStage,
-  fileRemove,
-  fileDiscardChanges,
-  repositoryStageAndCommit,
-  tagCreate,
-  tagRemove,
-} from "../Commands";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import Context from "../Context";
 import {
-  GitValues,
-  GitContext,
-  defaultGitValues,
-  GitUpdating,
-  GitUnboundCommand,
-  GitBaker,
   GitInternal,
-  GitBakers,
+  GitContext,
+  AuthOptions,
+  defaultGitInternal,
+  defaultAuth,
+  defaultAuthor,
+  GitWrite,
+  GitReturn,
+  GitRead,
 } from "../Types";
+import EventEmitter from "eventemitter3";
 import {
+  AuthorType,
   branchCurrent,
   branchList,
-  directoryStatus,
-  fileRead,
-  directoryRead,
-  pathExists,
-  fileReadAt,
   commitHistory,
-  remoteList,
+  directoryRead,
+  directoryStatus,
+  directoryCompare,
+  fileRead,
+  fileReadAt,
+  pathExists,
   tagList,
+  remoteList,
+  fileStatus,
 } from "../Queries";
+import {
+  branchCreate,
+  branchRemove,
+  branchRebase,
+  branchMerge,
+  branchCheckout,
+  branchRename,
+  branchSolveConflicts,
+  directoryMake,
+  directoryRemove,
+  fileDiscardChanges,
+  fileRemove,
+  fileStage,
+  fileUnstage,
+  fileWrite,
+  fileMove,
+  tagRemove,
+  tagCreate,
+  repositoryStageAndCommit,
+  repositoryPush,
+  repositoryFetch,
+  repositoryCommit,
+  repositoryInit,
+  repositoryClone,
+  remoteAdd,
+  remoteDelete,
+} from "../Commands";
 
-export type AuthOptions =
-  | {
-      type: "set";
-      value: GitAuth;
-    }
-  | {
-      type: "getter";
-      getValue: () => Promise<GitAuth>;
-    }
-  | {
-      type: "element";
-      value: React.ComponentType<{
-        auth: GitAuth;
-        onLoginAttempt: (auth: GitAuth) => void;
-      }>;
-    };
-
+/**
+ * Props for the provider
+ */
 export interface GitProps {
-  uri: string;
-  corsProxy: string;
+  /**
+   * The remote url
+   */
+  url: string;
+  /**
+   * The CORS proxy (needed for some providers)
+   */
+  corsProxy: string | false;
+  /**
+   * Where to clone into
+   */
   basepath: string;
+  /**
+   * The author of commis
+   */
   author: { name: string; email: string };
+  /**
+   * The authentication scheme
+   */
   auth: AuthOptions;
+  /**
+   * What to display when loading
+   */
   loader: React.ComponentType<{ message: string }>;
+  /**
+   * Message logger
+   */
   onMessage: (message: string) => void;
+  /**
+   * Error logger
+   */
   onError: (message: string) => void;
   children?: React.ReactNode;
 }
 
+/**
+ * @hidden
+ */
+export const defaultLoader = (({ message }): React.ReactNode => {
+  return <span>{message}</span>;
+}) as React.FC<{ message: string }>;
+
+/**
+ * Default props if not defined
+ */
 export const defaultGitProps: () => Partial<GitProps> = () => ({
-  corsProxy: "https://cors.isomorphic-git.org/",
   basepath: "/",
-  author: { name: "react-git-provider", email: "dev@publica.re" },
-  auth: {
-    type: "getter",
-    async getValue(): Promise<GitAuth> {
-      return {
-        username: prompt("User name") || "",
-        password: prompt("Password") || "",
-      };
-    },
-  },
-  loader: (((({ message }): React.ReactNode => {
-    return <span>{message}</span>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  }) as React.FC<{ message: string }>) as unknown) as any,
+  corsProxy: "https://cors.isomorphic-git.org",
+  author: defaultAuthor,
+  auth: defaultAuth,
+  loader: defaultLoader,
   onMessage: (message: string): void => console.log("[GIT-CONSUMER]", message),
   onError: (message: string): void => console.error("[GIT-CONSUMER]", message),
 });
 
+/**
+ * State of the authentication
+ *
+ * @internal
+ */
 export type GitAuthStatus =
   | {
       type: "none";
     }
-  | { type: "waiting"; auth: GitAuth }
-  | { type: "attempt"; auth: GitAuth }
-  | { type: "failed"; auth: GitAuth }
-  | { type: "success"; auth: GitAuth };
+  | { type: "waiting"; url: string; auth: GitAuth }
+  | { type: "attempt"; url: string; auth: GitAuth }
+  | { type: "failed"; url: string; auth: GitAuth }
+  | { type: "success"; url: string; auth: GitAuth };
 
+/**
+ * State of the provider
+ *
+ * @internal
+ */
 export interface GitState {
+  /**
+   * Is it loaded
+   */
   isLoaded: boolean;
+  /**
+   * Current auth status
+   */
   authStatus: GitAuthStatus;
+  /**
+   * All messages
+   */
   messageLog: string[];
+  /**
+   * All errors
+   */
   errorLog: string[];
-  values: GitValues;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  lastOptions: Record<string, any>;
+  /**
+   * Current author
+   */
+  author: { name: string; email: string };
 }
 
+/**
+ * Default git state
+ *
+ * @internal
+ */
 export const defaultGitState: () => GitState = () => ({
   isLoaded: false,
   authStatus: { type: "none" },
   messageLog: [],
   errorLog: [],
-  values: defaultGitValues(),
-  lastOptions: {},
+  author: defaultGitInternal().author,
 });
 
+/**
+ * A Git provider
+ */
 export default class Provider extends React.Component<GitProps, GitState> {
-  private fs: PromiseFsClient = new FS(this.props.uri);
+  /**
+   * The underlying file system.
+   *
+   * @internal
+   */
+  private fs: PromiseFsClient = new FS(this.props.url);
+  /**
+   * The underlying emitters
+   *
+   * @internal
+   */
+  private emitter: EventEmitter = new EventEmitter();
 
+  /**
+   * The default props
+   *
+   * @internal
+   */
   public static defaultProps = defaultGitProps();
 
   constructor(props: GitProps) {
     super(props);
-    this.state = defaultGitState();
+    this.state = {
+      ...defaultGitState(),
+      author: props.author,
+    };
   }
 
   @bind
   private async handleAuth(url: string, auth: GitAuth): Promise<GitAuth> {
     this.setState({
-      authStatus: { type: "waiting", auth: auth },
+      authStatus: { type: "waiting", url: url, auth: auth },
     });
     while (this.state.authStatus.type === "waiting") {
       await new Promise((r) => setTimeout(r, 100));
@@ -159,7 +226,14 @@ export default class Provider extends React.Component<GitProps, GitState> {
 
   @bind
   private handleLoginAttempt(auth: GitAuth): void {
-    this.setState({ authStatus: { type: "attempt", auth: auth } });
+    this.setState({
+      authStatus: {
+        type: "attempt",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        url: (this.state.authStatus as any).url || "",
+        auth: auth,
+      },
+    });
   }
 
   @bind
@@ -175,14 +249,14 @@ export default class Provider extends React.Component<GitProps, GitState> {
   }
 
   @bind
-  private handleAuthFailure(_url: string, auth: GitAuth): void {
-    this.setState({ authStatus: { type: "failed", auth: auth } });
-    this.handleAuth(_url, auth);
+  private handleAuthFailure(url: string, auth: GitAuth): void {
+    this.setState({ authStatus: { type: "failed", url: url, auth: auth } });
+    this.handleAuth(url, auth);
   }
 
   @bind
-  private handleAuthSuccess(_url: string, auth: GitAuth): void {
-    this.setState({ authStatus: { type: "success", auth: auth } });
+  private handleAuthSuccess(url: string, auth: GitAuth): void {
+    this.setState({ authStatus: { type: "success", url: url, auth: auth } });
   }
 
   @bind
@@ -201,6 +275,7 @@ export default class Provider extends React.Component<GitProps, GitState> {
     );
   }
 
+  /*
   @bind
   private handleProgress({
     phase,
@@ -217,6 +292,7 @@ export default class Provider extends React.Component<GitProps, GitState> {
       );
     else this.handleMessage(phase);
   }
+  */
 
   @bind
   async componentDidMount(): Promise<void> {
@@ -232,220 +308,278 @@ export default class Provider extends React.Component<GitProps, GitState> {
   }
 
   @bind
-  private async setup(checkout = true): Promise<void> {
-    await git.clone({
-      fs: this.fs,
-      http: http,
-      dir: this.props.basepath,
-      corsProxy: this.props.corsProxy,
-      url: this.props.uri,
-      onAuth: this.getAuth,
-      onAuthFailure: this.handleAuthFailure,
-      onAuthSuccess: this.handleAuthSuccess,
-      onMessage: this.handleMessage,
-      onProgress: this.handleProgress,
-      noCheckout: !checkout,
+  private async setup(checkout?: boolean): Promise<void> {
+    await this.gitContext().io.repository.clone({
+      uri: this.props.url,
+      noCheckout: checkout !== undefined ? !checkout : undefined,
     });
   }
 
-  private gitContext: GitContext = {
-    internal: {
-      fs: this.fs,
-      git: git,
-      http: http,
-      corsProxy: this.props.corsProxy,
-      basepath: this.props.basepath,
-      events: {
-        message: this.handleMessage,
-        error: this.handleError,
-      },
-      author: this.props.author,
-      getAuth: this.getAuth,
-    },
-    commands: {
-      branchCreate: this.doUpdate(["branchList"], branchCreate),
-      branchRemove: this.doUpdate(
-        [
-          "branchList",
-          "branchCurrent",
-          "existingPaths",
-          "directoryRead",
-          "directoryStatus",
-          "fileRead",
-          "existingPaths",
-          "commitHistory",
-        ],
-        branchRemove
-      ),
-      branchSwitch: this.doUpdate(
-        [
-          "branchList",
-          "branchCurrent",
-          "existingPaths",
-          "directoryRead",
-          "directoryStatus",
-          "fileRead",
-          "existingPaths",
-          "commitHistory",
-        ],
-        branchSwitch
-      ),
-      branchCheckout: this.doUpdate(
-        [
-          "branchList",
-          "branchCurrent",
-          "existingPaths",
-          "directoryRead",
-          "directoryStatus",
-          "fileRead",
-          "existingPaths",
-          "commitHistory",
-        ],
-        branchCheckout
-      ),
-      directoryMake: this.doUpdate(
-        ["directoryRead", "directoryStatus", "existingPaths"],
-        directoryMake
-      ),
-      directoryRemove: this.doUpdate(
-        ["directoryRead", "directoryStatus", "fileRead", "existingPaths"],
-        directoryRemove
-      ),
-      fileDiscardChanges: this.doUpdate(
-        ["directoryRead", "directoryStatus", "fileRead"],
-        fileDiscardChanges
-      ),
-      fileRemove: this.doUpdate(
-        ["directoryRead", "directoryStatus", "fileRead", "existingPaths"],
-        fileRemove
-      ),
-      fileStage: this.doUpdate(["directoryStatus"], fileStage),
-      fileUnstage: this.doUpdate(["directoryStatus"], fileUnstage),
-      fileWrite: this.doUpdate(
-        ["fileRead", "existingPaths", "directoryStatus", "directoryRead"],
-        fileWrite
-      ),
-      remoteDelete: this.doUpdate(["remoteList", "branchList"], remoteDelete),
-      remoteAdd: this.doUpdate(["remoteList", "branchList"], remoteAdd),
-      repositoryClone: this.doUpdate(
-        [
-          "branchList",
-          "directoryRead",
-          "directoryStatus",
-          "fileRead",
-          "existingPaths",
-          "commitHistory",
-        ],
-        repositoryClone
-      ),
-      repositoryCommit: this.doUpdate(
-        ["directoryStatus", "commitHistory"],
-        repositoryCommit
-      ),
-      repositoryInit: this.doUpdate(
-        [
-          "branchList",
-          "directoryRead",
-          "directoryStatus",
-          "fileRead",
-          "existingPaths",
-          "commitHistory",
-        ],
-        repositoryInit
-      ),
-      repositoryPull: this.doUpdate(
-        [
-          "branchList",
-          "directoryRead",
-          "directoryStatus",
-          "fileRead",
-          "existingPaths",
-          "commitHistory",
-        ],
-        repositoryPull
-      ),
-      repositoryPush: this.doUpdate(
-        [
-          "branchList",
-          "directoryRead",
-          "directoryStatus",
-          "fileRead",
-          "commitHistory",
-        ],
-        repositoryPush
-      ),
-      repositoryStageAndCommit: this.doUpdate(
-        ["directoryStatus", "commitHistory"],
-        repositoryStageAndCommit
-      ),
-      tagCreate: this.doUpdate(["tagList"], tagCreate),
-      tagRemove: this.doUpdate(["tagList"], tagRemove),
-    },
-    bakers: {
-      branchCurrent: this.doBaking(["branchCurrent"], branchCurrent),
-      branchList: this.doBaking(["branchList"], branchList),
-      commitHistory: this.doBaking(["commitHistory"], commitHistory),
-      directoryRead: this.doBaking(["fileTree"], directoryRead),
-      directoryStatus: this.doBaking(["fileStatusTree"], directoryStatus),
-      fileRead: this.doBaking(["fileData"], fileRead),
-      fileReadAt: this.doBaking(["fileDataAt"], fileReadAt),
-      existingPaths: this.doBaking(["existingPaths"], pathExists),
-      remoteList: this.doBaking(["remoteList"], remoteList),
-      tagList: this.doBaking(["tagList"], tagList),
-    },
-    values: this.state?.values,
-  };
-
   @bind
-  private doUpdate<
-    Updates extends (keyof GitBakers)[],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    Params extends Record<string, any>,
-    Returns
-  >(
-    updates: Updates,
-    command: GitUnboundCommand<Params, Returns>
-  ): GitUpdating<Updates, Params, Returns> {
-    return (async (params: Params): Promise<Returns> => {
-      const out = await command(this.gitContext.internal)(params);
-      for (const update of updates) {
-        if (this.state.lastOptions[update] !== undefined) {
-          this.gitContext.bakers[update](this.state.lastOptions[update]);
-        }
-      }
-      return out;
-    }) as GitUpdating<Updates, Params, Returns>;
+  private setAuthor(author: AuthorType): void {
+    this.setState({ author: author });
   }
 
   @bind
-  private doBaking<
-    Bakes extends (keyof GitValues)[],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    Options extends Record<string, any>
-  >(
-    bakes: Bakes,
-    baker: (
-      internal: GitInternal
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ) => (options: Options) => Promise<any>
-  ): GitBaker<Bakes, Options> {
-    return (async (options?: Options) => {
-      const value = await baker(this.gitContext.internal)(
-        options || ({} as Options)
-      );
-      this.setState(({ lastOptions }) => ({
-        lastOptions: {
-          ...lastOptions,
-          [baker.name]: options,
+  private gitInternal(): GitInternal {
+    const { fs, getAuth } = this;
+    const { url } = this.props;
+    const basepath = `/${pathUtils.relative("/", this.props.basepath)}`;
+    const corsProxy =
+      this.props.corsProxy === false
+        ? undefined
+        : this.props.corsProxy.replace(/\/^/, "");
+    return {
+      fs: fs,
+      git: git,
+      http: http,
+      corsProxy: corsProxy,
+      basepath: basepath,
+      loggers: {
+        message: this.handleMessage,
+        error: this.handleError,
+      },
+      url: url,
+      setAuthor: this.setAuthor,
+      author: this.state.author,
+      getAuth: getAuth,
+      handleAuthFailure: this.handleAuthFailure,
+      handleAuthSuccess: this.handleAuthSuccess,
+    };
+  }
+
+  @bind
+  private gitContext(): GitContext {
+    return {
+      internal: this.gitInternal(),
+      io: {
+        branch: {
+          create: this.performIoWrite(branchCreate, ["branch.list"]),
+          remove: this.performIoWrite(branchRemove, ["branch.list"]),
+          rebase: this.performIoWrite(branchRebase, [
+            "branch.commitHistory",
+            "directory.status",
+            "directory.read",
+            "file.exists",
+            "file.data",
+            "file.status",
+          ]),
+          merge: this.performIoWrite(branchMerge, [
+            "branch.commitHistory",
+            "directory.status",
+            "directory.read",
+            "file.exists",
+            "file.data",
+            "file.status",
+          ]),
+          checkout: this.performIoWrite(branchCheckout, [
+            "branch.current",
+            "branch.commitHistory",
+            "directory.status",
+            "directory.read",
+            "file.exists",
+            "file.data",
+            "file.status",
+          ]),
+          rename: this.performIoWrite(branchRename, [
+            "branch.current",
+            "branch.list",
+          ]),
+          solveConflicts: this.performIoWrite(branchSolveConflicts, [
+            "branch.commitHistory",
+            "directory.status",
+            "directory.read",
+            "file.exists",
+            "file.data",
+            "file.status",
+          ]),
+          current: this.performIoRead(branchCurrent),
+          list: this.performIoRead(branchList),
+          commitHistory: this.performIoRead(commitHistory),
         },
-      }));
-      for (const bake of bakes) {
-        this.setState(({ values }) => ({
-          values: { ...values, [bake]: value },
-        }));
+        directory: {
+          make: this.performIoWrite(directoryMake, [
+            "directory.read",
+            "directory.status",
+            "file.exists",
+            "file.read",
+            "file.status",
+          ]),
+          remove: this.performIoWrite(directoryRemove, [
+            "directory.read",
+            "directory.status",
+            "file.exists",
+            "file.read",
+            "file.status",
+          ]),
+          read: this.performIoRead(directoryRead),
+          status: this.performIoRead(directoryStatus),
+          compare: this.performIoRead(directoryCompare),
+        },
+        file: {
+          discardChanges: this.performIoWrite(fileDiscardChanges, [
+            "directory.read",
+            "directory.status",
+            "file.exists",
+            "file.read",
+            "file.status",
+          ]),
+          remove: this.performIoWrite(fileRemove, [
+            "directory.read",
+            "directory.status",
+            "file.exists",
+            "file.read",
+            "file.status",
+          ]),
+          stage: this.performIoWrite(fileStage, [
+            "directory.status",
+            "file.status",
+          ]),
+          unstage: this.performIoWrite(fileUnstage, [
+            "directory.status",
+            "file.status",
+          ]),
+          write: this.performIoWrite(fileWrite, [
+            "directory.read",
+            "directory.status",
+            "file.exists",
+            "file.read",
+            "file.status",
+          ]),
+          move: this.performIoWrite(fileMove, [
+            "directory.read",
+            "directory.status",
+            "file.exists",
+            "file.read",
+            "file.status",
+          ]),
+          read: this.performIoRead(fileRead),
+          readAt: this.performIoRead(fileReadAt),
+          exists: this.performIoRead(pathExists),
+          status: this.performIoRead(fileStatus),
+        },
+        remote: {
+          add: this.performIoWrite(remoteAdd, ["remote.list", "branch.list"]),
+          delete: this.performIoWrite(remoteDelete, [
+            "remote.list",
+            "branch.list",
+          ]),
+          list: this.performIoRead(remoteList),
+        },
+        repository: {
+          clone: this.performIoWrite(repositoryClone, [
+            "branch.commitHistory",
+            "branch.list",
+            "branch.current",
+            "remote.list",
+            "directory.read",
+            "directory.status",
+            "file.read",
+            "file.status",
+            "file.exists",
+          ]),
+          init: this.performIoWrite(repositoryInit, [
+            "branch.commitHistory",
+            "branch.list",
+            "branch.current",
+            "remote.list",
+            "directory.read",
+            "directory.status",
+            "file.read",
+            "file.status",
+            "file.exists",
+          ]),
+          commit: this.performIoWrite(repositoryCommit, [
+            "directory.status",
+            "file.status",
+            "branch.commitHistory",
+          ]),
+          fetch: this.performIoWrite(repositoryFetch, [
+            "branch.commitHistory",
+            "branch.list",
+            "branch.current",
+            "remote.list",
+            "directory.read",
+            "directory.status",
+            "file.read",
+            "file.status",
+            "file.exists",
+          ]),
+          push: this.performIoWrite(repositoryPush, [
+            "directory.status",
+            "file.status",
+            "branch.commitHistory",
+            "branch.list",
+          ]),
+          stageAndCommit: this.performIoWrite(repositoryStageAndCommit, [
+            "file.status",
+            "directory.status",
+            "branch.commitHistory",
+          ]),
+        },
+        tag: {
+          create: this.performIoWrite(tagCreate, ["tag.list"]),
+          remove: this.performIoWrite(tagRemove, ["tag.list"]),
+          list: this.performIoRead(tagList),
+        },
+      },
+      emitter: this.emitter,
+    };
+  }
+
+  @bind
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private triggerUpdates(events: { name: string; options?: any[] }[]): boolean {
+    if (events.length > 1) {
+      const thisUpdate = this.triggerUpdates([events[0]]);
+      const nextUpdate = this.triggerUpdates(events.slice(1));
+      return thisUpdate && nextUpdate;
+    }
+    const { name, options } = events[0];
+    return this.emitter.emit(name, ...(options || []));
+  }
+
+  @bind
+  private performIoWrite<Params, Updates extends string[], Returns>(
+    fn: (internal: GitInternal) => (params: Params) => Promise<Returns>,
+    updates: Updates
+  ): GitWrite<Params, Updates, Returns> {
+    return async (params: Params): Promise<GitReturn<Returns>> => {
+      try {
+        const value = await fn(this.gitInternal())(params);
+        this.triggerUpdates(updates.map((event) => ({ name: event })));
+        return {
+          type: "success",
+          value: value,
+        };
+      } catch (e) {
+        this.props.onError(e);
+        return {
+          type: "error",
+          message: e,
+        } as GitReturn<Returns>;
       }
-      return value;
-    }) as GitBaker<Bakes>;
+    };
+  }
+
+  @bind
+  private performIoRead<Options, Returns>(
+    fn: (internal: GitInternal) => (options: Options) => Promise<Returns>
+  ): GitRead<Options, Returns> {
+    return async (options: Options): Promise<GitReturn<Returns>> => {
+      try {
+        const parsed = await fn(this.gitInternal())(options);
+        return {
+          type: "success",
+          value: parsed,
+        };
+      } catch (e) {
+        return {
+          type: "error",
+          message: e,
+        } as GitReturn<Returns>;
+      }
+    };
   }
 
   render(): React.ReactNode {
@@ -456,6 +590,7 @@ export default class Provider extends React.Component<GitProps, GitState> {
     ) {
       output = (
         <this.props.auth.value
+          url={this.state.authStatus.url}
           auth={this.state.authStatus.auth}
           onLoginAttempt={this.handleLoginAttempt}
         />
@@ -464,11 +599,11 @@ export default class Provider extends React.Component<GitProps, GitState> {
       output = <this.props.loader message={this.state.messageLog[0]} />;
     }
     return (
-      <React.Suspense fallback={"loading"}>
+      <React.Suspense
+        fallback={<this.props.loader message={this.state.messageLog[0]} />}
+      >
         {output}
-        <Context.Provider
-          value={{ ...this.gitContext, values: this.state.values }}
-        >
+        <Context.Provider value={this.gitContext()}>
           {output === null && this.props.children}
         </Context.Provider>
       </React.Suspense>

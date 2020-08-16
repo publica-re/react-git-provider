@@ -2,8 +2,14 @@ import { GitInternal } from "../Types";
 
 import { Tag } from "./_types";
 
+/**
+ * Options to list tags
+ */
 export type TagListOptions = {};
 
+/**
+ * List tags
+ */
 export function tagList(
   internal: GitInternal
 ): (options: TagListOptions) => Promise<string[]> {

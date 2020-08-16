@@ -1,9 +1,18 @@
 import { GitInternal } from "../Types";
 
+/**
+ * Parameters to remove a tag
+ */
 export type TagRemoveParams = {
+  /**
+   * Tag name
+   */
   name: string;
 };
 
+/**
+ * Remove a tag
+ */
 export function tagRemove(
   internal: GitInternal
 ): (params: TagRemoveParams) => Promise<void> {

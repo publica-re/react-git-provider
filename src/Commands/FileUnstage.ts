@@ -2,10 +2,19 @@ import pathUtils from "path";
 
 import { GitInternal } from "../Types";
 
+/**
+ * Parameters to unstage a file
+ */
 export type FileUnstageParams = {
+  /**
+   * Path to the file
+   */
   path: string;
 };
 
+/**
+ * Unstage a file
+ */
 export function fileUnstage(
   internal: GitInternal
 ): (params: FileUnstageParams) => Promise<void> {

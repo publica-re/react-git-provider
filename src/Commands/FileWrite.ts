@@ -2,11 +2,19 @@ import pathUtils from "path";
 
 import { GitInternal } from "../Types";
 
+/**
+ * Parameters to write a file.
+ *
+ * Default mode: "text"
+ */
 export type FileWriteParams =
   | { path: string; content: string }
   | { path: string; content: string; mode: "text" }
   | { path: string; content: Uint8Array; mode: "binary" };
 
+/**
+ * Write a file
+ */
 export function fileWrite(
   internal: GitInternal
 ): (params: FileWriteParams) => Promise<boolean> {

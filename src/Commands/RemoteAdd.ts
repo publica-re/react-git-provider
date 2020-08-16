@@ -1,10 +1,22 @@
 import { GitInternal } from "../Types";
 
+/**
+ * Parameters to add a remote
+ */
 export type RemoteAddParams = {
+  /**
+   * Name of the remote
+   */
   name: string;
+  /**
+   * URL to the remote
+   */
   uri: string;
 };
 
+/**
+ * Add a remote
+ */
 export function remoteAdd(
   internal: GitInternal
 ): (params: RemoteAddParams) => Promise<void> {

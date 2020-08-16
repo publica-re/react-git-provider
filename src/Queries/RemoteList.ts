@@ -2,8 +2,14 @@ import { GitInternal } from "../Types";
 
 import { Remote } from "./_types";
 
+/**
+ * Options to list remotes
+ */
 export type RemoteListOptions = {};
 
+/**
+ * List remotes
+ */
 export function remoteList(
   internal: GitInternal
 ): (options: RemoteListOptions) => Promise<Remote[]> {

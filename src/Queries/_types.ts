@@ -36,3 +36,56 @@ export type Branch = string;
 export interface BranchList {
   [remote: string]: Branch[];
 }
+
+export type CompareStatus =
+  | {
+      type: "unchanged";
+    }
+  | {
+      type: "absent";
+    }
+  | {
+      type: "left-only";
+      isBinary: boolean;
+      leftContent: string | (() => Promise<Uint8Array>);
+    }
+  | {
+      type: "right-only";
+      rightContent: string;
+      rightIsBinary: boolean;
+    }
+  | {
+      type: "changed";
+      leftContent: string;
+      rightContent: string;
+      leftIsBinary: boolean;
+      rightIsBinary: boolean;
+    };
+
+export interface DirectoryCompare {
+  [path: string]: CompareStatus;
+}
+
+export interface DirectoryStatus {
+  [path: string]: FileStatus;
+}
+
+export type MergeConflictSolution =
+  | {
+      file: string;
+      type: "binary";
+      left: Uint8Array;
+      right: Uint8Array;
+      accept?: boolean;
+    }
+  | {
+      file: string;
+      type: "patch";
+      content: string;
+      accept?: boolean;
+    };
+
+export interface AuthorType {
+  name: string;
+  email: string;
+}
